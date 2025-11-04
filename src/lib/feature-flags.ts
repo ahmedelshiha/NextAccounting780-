@@ -40,10 +40,5 @@ export function isFeatureEnabled(name: string, defaultValue = true): boolean {
     if (typeof v === 'string') return v.toLowerCase() === 'true'
   }
 
-  if (name === 'dashboardSinglePage') {
-    const v = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_DASHBOARD_SINGLE_PAGE : undefined
-    if (typeof v === 'string') return v.toLowerCase() === 'true'
-  }
-
   return defaultValue
 }
