@@ -2,7 +2,23 @@ import { useCallback, useRef } from 'react'
 import { apiFetch } from '@/lib/api'
 import { UserItem } from '../contexts/UserDataContext'
 
-interface FetchOptions {
+export interface ServerFilterOptions {
+  search?: string
+  role?: string
+  status?: string
+  department?: string
+  tier?: string
+  minExperience?: number
+  maxExperience?: number
+  createdAfter?: string
+  createdBefore?: string
+  sortBy?: 'name' | 'email' | 'createdAt' | 'role' | 'department' | 'tier'
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  limit?: number
+}
+
+interface FetchOptions extends ServerFilterOptions {
   page?: number
   limit?: number
   signal?: AbortSignal
@@ -12,13 +28,15 @@ interface ServiceCache {
   data: UserItem[] | null
   timestamp: number
   ttl: number
+  filters?: ServerFilterOptions
 }
 
 // Global cache for user service
 const userServiceCache: ServiceCache = {
   data: null,
   timestamp: 0,
-  ttl: 30000 // 30 seconds
+  ttl: 30000, // 30 seconds
+  filters: {}
 }
 
 /**
