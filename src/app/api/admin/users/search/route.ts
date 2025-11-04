@@ -6,8 +6,10 @@ import { respond } from '@/lib/api-response'
 import { hasPermission, PERMISSIONS } from '@/lib/permissions'
 import { tenantFilter } from '@/lib/tenant'
 import { applyRateLimit, getClientIp } from '@/lib/rate-limit'
+import { createHash } from 'crypto'
 
 export const runtime = 'nodejs'
+export const revalidate = 30 // ISR: Revalidate every 30 seconds for search results
 
 export interface UserFilterOptions {
   search?: string
