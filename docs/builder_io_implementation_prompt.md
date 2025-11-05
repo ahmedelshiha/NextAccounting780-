@@ -28,8 +28,12 @@ You **MUST** update the following files after each task or logical phase is comp
 1.  **`docs/ADMIN_USERS_IMPLEMENTATION_LOG.md`**: Log all daily activities, decisions, and major code changes.
 2.  **`docs/ADMIN_USERS_IMPLEMENTATION_TRACKING.md`**: Update the status of the completed task and the overall phase progress.
 3.  **`docs/ADMIN_USERS_WORKSTATION_IMPLEMENTATION_ROADMAP.md`**: Mark the task as complete (`[x]`) and add a brief summary of the implementation details.
-4.  **`docs/ADMIN_USERS_PHASE_0_CHECKLIST.md`** (and subsequent phase checklists): Mark off completed items for the current phase.
-5.  **`docs/ADMIN_USERS_PHASE_0_COMPLETION.md`** (and subsequent phase completion reports): Fill out the final summary upon phase sign-off.
+4.  **Phase Checklists** (and subsequent phase checklists): Mark off completed items for the current phase.
+    - **`docs/ADMIN_USERS_PHASE_0_CHECKLIST.md`** - Phase 0 preparation & setup checklist
+    - **`docs/ADMIN_USERS_PHASE_1_CHECKLIST.md`** - Phase 1 foundation & layout checklist (Detailed task completion checklist)
+5.  **Phase Completion Reports** (and subsequent phase completion reports): Fill out the final summary upon phase sign-off.
+    - **`docs/ADMIN_USERS_PHASE_0_COMPLETION.md`** - Phase 0 completion report
+    - **`docs/ADMIN_USERS_PHASE_1_COMPLETION.md`** - Phase 1 completion report (Comprehensive completion report)
 
 Your update should include:
 - Status, summary of changes, and actual hours spent.

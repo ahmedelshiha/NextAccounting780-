@@ -67,6 +67,19 @@
   letter-spacing: 0.5px;
 }
 
+/* Quick Stats Card */
+.quick-stats-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
 /* Quick Stats Container */
 .sidebar-stats-container {
   display: flex;
@@ -289,6 +302,25 @@
   font-size: 0.875rem;
 }
 
+/* Pagination Section */
+.pagination-section {
+  flex-shrink: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
 /* ============================================================================
    INSIGHTS PANEL - Right Column (Fixed Width)
    ============================================================================ */
@@ -361,6 +393,34 @@
 .section-title {
   font-size: 0.875rem;
   font-weight: 600;
+  color: var(--foreground);
+}
+
+.insights-stats-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--foreground);
 }
 

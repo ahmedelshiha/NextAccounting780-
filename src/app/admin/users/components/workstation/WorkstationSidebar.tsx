@@ -87,12 +87,13 @@ export function WorkstationSidebar({
 
   return (
     <div className={`workstation-sidebar-content ${className || ''}`}>
-      {/* Close Button (Mobile) */}
-      {!isOpen && (
+      {/* Close Button (Mobile Drawer) */}
+      {isOpen && onClose && (
         <button
           onClick={onClose}
-          className="md:hidden p-2 absolute top-2 right-2 rounded hover:bg-muted"
+          className="md:hidden absolute top-4 right-4 z-50 p-2 rounded-md hover:bg-muted transition-colors"
           aria-label="Close sidebar"
+          title="Close sidebar"
         >
           <X size={20} />
         </button>
