@@ -39,39 +39,31 @@ describe('AdminUsersLayout', () => {
   describe('Rendering', () => {
     it('should render header with quick actions', () => {
       renderWithContext(<AdminUsersLayout />)
-
-      // Check for header element
       const header = screen.getByRole('banner') || screen.getByText(/Add User|Import|Bulk|Export/)
       expect(header).toBeInTheDocument()
     })
 
     it('should render main content area', () => {
       renderWithContext(<AdminUsersLayout />)
-
-      // Check for main content area
       const main = screen.getByRole('main')
       expect(main).toBeInTheDocument()
     })
 
     it('should render sidebar', () => {
       renderWithContext(<AdminUsersLayout />)
-
-      // Check for sidebar with filters or analytics
       const aside = screen.getByRole('complementary')
       expect(aside).toBeInTheDocument()
     })
 
     it('should render user directory section', () => {
-      render(<AdminUsersLayout />)
-
+      renderWithContext(<AdminUsersLayout />)
       expect(screen.getByTestId('user-directory-section')).toBeInTheDocument()
     })
   })
 
   describe('State Management', () => {
     it('should handle user selection state', async () => {
-      render(<AdminUsersLayout />)
-
+      renderWithContext(<AdminUsersLayout />)
       const selectButton = screen.getByRole('button', { name: /Select User/i })
       fireEvent.click(selectButton)
 
@@ -81,9 +73,7 @@ describe('AdminUsersLayout', () => {
     })
 
     it('should manage sidebar visibility', () => {
-      render(<AdminUsersLayout />)
-
-      // Sidebar should be visible in desktop view
+      renderWithContext(<AdminUsersLayout />)
       const aside = screen.getByRole('complementary')
       expect(aside).toBeInTheDocument()
     })
@@ -91,24 +81,19 @@ describe('AdminUsersLayout', () => {
 
   describe('Responsive Behavior', () => {
     it('should render with proper layout structure', () => {
-      const { container } = render(<AdminUsersLayout />)
-
-      // Check for main container
+      const { container } = renderWithContext(<AdminUsersLayout />)
       const container_el = container.querySelector('.admin-workbench-container')
       expect(container_el).toBeInTheDocument()
 
-      // Check for header
       const header = container.querySelector('.admin-workbench-header')
       expect(header).toBeInTheDocument()
 
-      // Check for main content
       const main = container.querySelector('.admin-workbench-main')
       expect(main).toBeInTheDocument()
     })
 
     it('should have sidebar with proper classes', () => {
-      const { container } = render(<AdminUsersLayout />)
-
+      const { container } = renderWithContext(<AdminUsersLayout />)
       const sidebar = container.querySelector('.admin-workbench-sidebar')
       expect(sidebar).toBeInTheDocument()
       expect(sidebar).toHaveClass('open')
@@ -117,9 +102,7 @@ describe('AdminUsersLayout', () => {
 
   describe('Integration', () => {
     it('should not show bulk actions panel when no users selected', () => {
-      render(<AdminUsersLayout />)
-
-      // Bulk actions should not be visible when count is 0
+      renderWithContext(<AdminUsersLayout />)
       const bulkPanel = screen.queryByTestId('bulk-actions-panel')
       if (bulkPanel) {
         expect(bulkPanel).not.toBeVisible()
@@ -128,12 +111,12 @@ describe('AdminUsersLayout', () => {
 
     it('should render without errors', () => {
       expect(() => {
-        render(<AdminUsersLayout />)
+        renderWithContext(<AdminUsersLayout />)
       }).not.toThrow()
     })
 
     it('should handle mount and unmount', () => {
-      const { unmount } = render(<AdminUsersLayout />)
+      const { unmount } = renderWithContext(<AdminUsersLayout />)
       expect(screen.getByRole('main')).toBeInTheDocument()
       unmount()
     })
@@ -141,25 +124,21 @@ describe('AdminUsersLayout', () => {
 
   describe('Accessibility', () => {
     it('should have semantic HTML structure', () => {
-      const { container } = render(<AdminUsersLayout />)
-
-      // Check for semantic elements
+      const { container } = renderWithContext(<AdminUsersLayout />)
       expect(container.querySelector('header')).toBeInTheDocument()
       expect(container.querySelector('main')).toBeInTheDocument()
       expect(container.querySelector('aside')).toBeInTheDocument()
     })
 
     it('should have proper ARIA landmarks', () => {
-      render(<AdminUsersLayout />)
-
-      expect(screen.getByRole('banner')).toBeInTheDocument() // header
-      expect(screen.getByRole('main')).toBeInTheDocument()   // main
-      expect(screen.getByRole('complementary')).toBeInTheDocument() // aside
+      renderWithContext(<AdminUsersLayout />)
+      expect(screen.getByRole('banner')).toBeInTheDocument()
+      expect(screen.getByRole('main')).toBeInTheDocument()
+      expect(screen.getByRole('complementary')).toBeInTheDocument()
     })
 
     it('should have focusable buttons', () => {
-      render(<AdminUsersLayout />)
-
+      renderWithContext(<AdminUsersLayout />)
       const buttons = screen.getAllByRole('button')
       expect(buttons.length).toBeGreaterThan(0)
     })
@@ -167,16 +146,12 @@ describe('AdminUsersLayout', () => {
 
   describe('Filter Management', () => {
     it('should initialize with empty filters', () => {
-      render(<AdminUsersLayout />)
-
-      // Component should render without errors with empty filters
+      renderWithContext(<AdminUsersLayout />)
       expect(screen.getByRole('main')).toBeInTheDocument()
     })
 
     it('should handle filter updates', () => {
-      render(<AdminUsersLayout />)
-
-      // Verify component can handle filter state
+      renderWithContext(<AdminUsersLayout />)
       const main = screen.getByRole('main')
       expect(main).toBeInTheDocument()
     })
