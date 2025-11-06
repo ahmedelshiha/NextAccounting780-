@@ -54,7 +54,7 @@ describe('AdminUsersLayout', () => {
     })
 
     it('should render sidebar', () => {
-      render(<AdminUsersLayout />)
+      renderWithContext(<AdminUsersLayout />)
 
       // Check for sidebar with filters or analytics
       const aside = screen.getByRole('complementary')
