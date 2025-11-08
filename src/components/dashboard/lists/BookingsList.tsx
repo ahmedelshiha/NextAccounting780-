@@ -247,6 +247,25 @@ export default function BookingsList() {
           </div>
         </div>
       )}
+
+      {/* Assign modal */}
+      <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign to team member</DialogTitle>
+            <DialogDescription>Enter the team member ID to assign selected bookings</DialogDescription>
+          </DialogHeader>
+
+          <div className="p-4">
+            <Input value={assigneeId ?? ''} onChange={(e) => setAssigneeId(e.target.value)} placeholder="Team member ID" />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
+            <Button onClick={applyAssignSelected} disabled={!assigneeId}>Assign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
