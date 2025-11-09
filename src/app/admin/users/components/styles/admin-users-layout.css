@@ -126,6 +126,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: 100%;
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
@@ -137,6 +138,8 @@
 .admin-workbench-directory > * {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ============================================================================
