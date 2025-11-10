@@ -222,29 +222,27 @@ export function AdvancedQueryBuilder({
                   <CardTitle className="text-base">My Templates</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-32">
-                    <div className="space-y-2">
-                      {customTemplates.map((template) => (
-                        <div key={template.id} className="flex items-center justify-between gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 justify-start"
-                            onClick={() => loadTemplate(template.id)}
-                          >
-                            {template.name}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteTemplate(template.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="h-32 overflow-y-auto space-y-2">
+                    {customTemplates.map((template) => (
+                      <div key={template.id} className="flex items-center justify-between gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 justify-start"
+                          onClick={() => loadTemplate(template.id)}
+                        >
+                          {template.name}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteTemplate(template.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
