@@ -16,7 +16,7 @@
 | Export (CSV/Excel) | ✅ Complete | useExportUsers.ts, ExportButton.tsx | Export filtered or selected users |
 | Column Visibility | ✅ Complete | useColumnVisibility.ts, ColumnVisibilityMenu.tsx | Show/hide table columns with persistence |
 | Filter Persistence | ✅ Complete | useColumnVisibility.ts (localStorage) | Column visibility saved to localStorage |
-| Autocomplete | ⏳ Pending | — | Search suggestions (next iteration) |
+| Autocomplete | ✅ Complete | useSearchSuggestions.ts, SearchSuggestionsDropdown.tsx | Intelligent search suggestions with highlighting |
 
 ---
 
