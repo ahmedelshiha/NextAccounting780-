@@ -49,12 +49,8 @@ export function useQueryBuilder(initialQuery?: FilterGroup | FilterCondition) {
 
   // Create a new empty group
   const createEmptyGroup = useCallback((operator: LogicalOperator = 'AND'): FilterGroup => {
-    return {
-      id: uuidv4(),
-      conditions: [createEmptyCondition()],
-      operator
-    }
-  }, [createEmptyCondition])
+    return createEmptyGroupHelper(operator)
+  }, [])
 
   // Add a new condition to a group
   const addCondition = useCallback((groupId: string) => {
