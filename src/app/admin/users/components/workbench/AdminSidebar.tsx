@@ -204,13 +204,15 @@ export default function AdminSidebar({
           width: 100%;
           padding: 1rem;
           gap: 0.5rem;
-          transition: all 300ms ease-in-out;
-          overflow: hidden;
+          transition: padding 300ms ease-in-out;
+          overflow: visible;
+          box-sizing: border-box;
         }
 
         .admin-sidebar-wrapper[data-collapsed="true"] {
-          padding: 0.75rem 0.5rem;
-          opacity: 0.95;
+          padding: 0.5rem;
+          align-items: center;
+          justify-content: flex-start;
         }
 
         .admin-sidebar-header {
