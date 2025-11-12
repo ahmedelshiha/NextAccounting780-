@@ -88,12 +88,12 @@ const _api_POST = async (request: NextRequest) => {
     // Record consent
     await prisma.consent.create({
       data: {
-        tenantId: ctx.tenantId,
+        tenantId: ctx.tenantId!,
         entityId: entity.id,
         type: "terms",
         version: input.consentVersion,
-        acceptedBy: session.user.id,
-        ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip"),
+        acceptedBy: userId,
+        ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || undefined,
         userAgent: request.headers.get("user-agent") || undefined,
       },
     });
@@ -107,9 +107,9 @@ const _api_POST = async (request: NextRequest) => {
     } else {
       await prisma.idempotencyKey.create({
         data: {
-          tenantId: ctx.tenantId,
+          tenantId: ctx.tenantId!,
           key: input.idempotencyKey,
-          userId: session.user.id,
+          userId: userId,
           entityType: "entity",
           entityId: entity.id,
           status: "PROCESSED",
@@ -120,8 +120,8 @@ const _api_POST = async (request: NextRequest) => {
     // Emit audit event
     await prisma.auditEvent.create({
       data: {
-        tenantId: ctx.tenantId,
-        userId: session.user.id,
+        tenantId: ctx.tenantId!,
+        userId: userId,
         type: "entity.setup.requested",
         resource: "entity",
         details: {
