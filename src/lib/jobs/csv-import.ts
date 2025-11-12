@@ -110,7 +110,7 @@ export async function initializeImportJob(
     }));
 
     // Publish event
-    await redis.publish(JOB_CHANNEL, JSON.stringify({
+    await (redis as any).publish(JOB_CHANNEL, JSON.stringify({
       type: "job.initialized",
       jobId,
       status: "PENDING",
@@ -140,7 +140,7 @@ async function updateImportJobState(
     await redis.set(key, JSON.stringify(updated), { ex: IMPORT_TIMEOUT / 1000 });
 
     // Publish update event
-    await redis.publish(JOB_CHANNEL, JSON.stringify({
+    await (redis as any).publish(JOB_CHANNEL, JSON.stringify({
       type: "job.updated",
       jobId,
       status: updated.status,
