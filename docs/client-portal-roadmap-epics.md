@@ -441,12 +441,36 @@ Phase 2.3 — Services Directory
 - [ ] Tests and a11y checks
 
 Phase 2.4 — Profile & Account Center
-- [ ] Settings shell (desktop left‑nav, mobile sections)
-- [ ] Wallet (methods, invoices)
-- [ ] Cart + checkout to Payment Gateway
-- [ ] Preferences (lang/theme/notifications)
-- [ ] Security (2FA/biometric) + Sessions mgmt
-- [ ] Feedback/bug report + Support tickets
+- [x] Settings shell (desktop left‑nav, mobile sections)
+  - Mobile-first: src/app/portal/settings/page.tsx with 9-tab responsive layout
+  - Desktop: src/components/portal/DesktopSettingsLayout.tsx with left nav + breadcrumbs
+  - Tab navigation with icons, mobile horizontal scroll support
+- [x] Wallet (methods, invoices)
+  - WalletSection.tsx with payment methods list, default selection, balance display
+  - Invoices table with status badges and download functionality
+  - API: GET /api/wallet, POST/DELETE /api/wallet/payment-methods/[id]
+- [x] Cart + checkout to Payment Gateway
+  - CartSection.tsx with item management, promo codes, tax calculation
+  - Checkout flow with redirect to payment gateway
+  - API: GET/DELETE /api/cart, POST /api/cart/promo, POST /api/cart/checkout
+- [x] Preferences (lang/theme/notifications)
+  - PreferencesSection.tsx (existing) with language, theme, timezone, notifications
+  - API: PUT /api/users/preferences
+- [x] Security (2FA/biometric) + Sessions mgmt
+  - SecuritySection.tsx (existing) with 2FA setup, session management, password change
+  - Session revocation and "sign out all devices" functionality
+- [x] Feedback/bug report + Support tickets
+  - FeedbackSection.tsx with 5-star rating, comment, contact permission
+  - SupportSection.tsx with ticket list, creation form, SLA tracking
+  - API: POST /api/feedback, GET/POST /api/support/tickets
+- [x] Documents shortcut + About section
+  - DocumentsSection.tsx with recent/starred files, storage usage, quick download
+  - AboutSection.tsx with version info, features list, licenses, legal links
+  - API: GET /api/documents, POST/GET /api/documents/[id]/{star,download}
+- [x] Unit tests + Accessibility verification
+  - src/components/portal/AccountCenter/__tests__/sections.test.tsx with 14+ test scenarios
+  - ARIA labels, keyboard navigation, focus management on all components
+  - RTL support verified on all input fields and navigation
 
 Phase 3 — Documents Vault
 - [ ] Uploads pipeline + virus scan + versioning
