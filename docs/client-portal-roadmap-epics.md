@@ -199,6 +199,11 @@ Epic: GL-15 Launch
 
 ---
 
+## Alignment With Existing Admin Users Module
+- Current tech: React 19 + Suspense, dynamic imports (lazy), tab navigation (TabNavigation.tsx), unified UsersContextProvider composing data/UI/filter contexts, ErrorBoundary, performance metrics via lib/performance/metrics, toast notifications.
+- Our modular recommendations match: per-tab code-splitting, context-scoped state, ARIA tabs, ErrorBoundary, telemetry. We will reuse these patterns for portal modules (Setup Wizard, Dashboard widgets, Features Hub) to ensure consistency.
+- Action: replicate UsersContextProvider pattern for business-setup (SetupContextProvider) and compliance (ComplianceContextProvider); add performanceMetrics spans around tab loads; reuse TabNavigation for portal where appropriate.
+
 ## Enterprise Addendum Roadmap (Oracle Fusion/SAP–inspired)
 Epics: MDM-EN, BPM-EN, RULES-EN, INTEG-EN, DATA-EN, IAM-EN, GRC-EN, RESIL-EN, GLOBAL-EN, CHANGE-EN, TEST-EN
 - MDM-EN Master Data
