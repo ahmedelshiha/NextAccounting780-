@@ -1,6 +1,5 @@
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { sendInvitationEmail } from '@/lib/email/invitations';
-import { generateToken } from '@/lib/auth/token-generator';
 import { logger } from '@/lib/logger';
 
 export interface CreateInvitationInput {
