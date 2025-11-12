@@ -1,26 +1,22 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession(authOptions)
+export const DELETE = withTenantContext(
+  async (request: NextRequest, { params }: { params: { id: string } }) => {
+    try {
+      const { userId } = requireTenantContext()
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const { id } = params
+
+      return NextResponse.json({
+        success: true,
+        message: 'Item removed from cart',
+      })
+    } catch (error) {
+      console.error('Cart item delete error:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-
-    const { id } = params
-
-    return NextResponse.json({
-      success: true,
-      message: 'Item removed from cart',
-    })
-  } catch (error) {
-    console.error('Cart item delete error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+  },
+  { requireAuth: true }
+)
