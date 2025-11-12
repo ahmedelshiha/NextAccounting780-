@@ -76,7 +76,7 @@ export async function initializeVerificationJob(
 
   try {
     const key = `${JOB_STATE_PREFIX}${entityId}`;
-    await redis.setex(key, VERIFICATION_TIMEOUT / 1000, JSON.stringify(state));
+    await redis.set(key, JSON.stringify(state), { ex: VERIFICATION_TIMEOUT / 1000 });
     
     // Publish event
     await publishEvent("job.initialized", state);
@@ -111,7 +111,7 @@ export async function updateVerificationState(
     };
 
     const key = `${JOB_STATE_PREFIX}${entityId}`;
-    await redis.setex(key, VERIFICATION_TIMEOUT / 1000, JSON.stringify(updated));
+    await redis.set(key, JSON.stringify(updated), { ex: VERIFICATION_TIMEOUT / 1000 });
     
     // Publish update event
     await publishEvent("job.updated", updated);
