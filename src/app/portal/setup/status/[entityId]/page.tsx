@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Container } from "@/components/ui/container";
 import VerificationPending from "@/components/portal/business-setup/VerificationPending";
 import { logger } from "@/lib/logger";
 
