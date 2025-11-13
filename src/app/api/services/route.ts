@@ -181,7 +181,7 @@ export const GET = withTenantContext(
 
       // Get query parameters
       const search = request.nextUrl.searchParams.get('search');
-      const country = request.nextUrl.searchParams.get('country');
+      const country = request.nextUrl.searchParams.get('country') as Service['countryScope'][number] | null;
       const category = request.nextUrl.searchParams.get('category');
 
       // Filter services

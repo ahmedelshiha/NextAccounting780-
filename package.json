@@ -34,7 +34,7 @@
     "test:integration:serial": "vitest --run --reporter dot --threads false tests/integration",
     "test:e2e": "playwright test",
     "e2e:ci": "bash e2e/run-e2e.sh",
-    "vercel:build": "SENTRY_AUTH_TOKEN='' sh -lc \"pnpm db:generate && pnpm lint && pnpm build\"",
+    "vercel:build": "SENTRY_AUTH_TOKEN='' sh -lc \"pnpm db:generate && pnpm lint && SENTRY_CLI_ENABLED=false pnpm build\"",
     "monitoring:setup": "node scripts/production-monitoring.js",
     "monitoring:health": "node scripts/health-check.js",
     "production:deploy": "pnpm monitoring:setup && pnpm vercel:build",
