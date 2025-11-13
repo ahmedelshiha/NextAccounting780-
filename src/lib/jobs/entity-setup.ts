@@ -263,7 +263,7 @@ export async function verifyEntityRegistrations(
 
     logger.info("Entity verification completed", {
       entityId,
-      status: state.status,
+      status: state?.status,
       verifiedCount: verifiedRegistrations.length,
     });
 

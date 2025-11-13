@@ -130,6 +130,29 @@ model User {
   @@map("users")
 }
 
+model Invitation {
+  id String @id @default(cuid())
+  email String
+  tenantId String
+  role String // UserRole enum value as string
+  invitedBy String
+  token String @unique
+  status String @default("PENDING") // PENDING, ACCEPTED, EXPIRED, CANCELLED
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  acceptedAt DateTime?
+  acceptedBy String?
+  entityIds String[] @default([])
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
 model UserProfile {
   id                       String    @id @default(cuid())
   userId                   String    @unique
@@ -353,6 +376,7 @@ model Tenant {
   taxCodes              TaxCode[]                  @relation("TaxCodeMasterData")
   mergeLogs             MergeLog[]                 @relation("MergeLogs")
   survivorshipRules     SurvivorshipRule[]         @relation("SurvivorshipRules")
+  invitations           Invitation[] // Added missing relation field to Tenant model
 
   @@index([status])
 }

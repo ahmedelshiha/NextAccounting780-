@@ -293,7 +293,7 @@ export function ServicesDirectory() {
           <span className="ml-2 text-gray-600">Loading services...</span>
         </div>
       ) : services.length === 0 ? (
-        <Alert role="status">
+        <Alert>
           <AlertDescription>No services found. Try adjusting your filters.</AlertDescription>
         </Alert>
       ) : (
