@@ -80,18 +80,11 @@ export class MockESignatureProvider {
     const request = signatureRequests.get(requestId)
 
     if (!request) {
-      return { error: 'Request not found' }
+      throw new Error('Request not found')
     }
 
-    // Simulate status changes
-    const now = new Date().getTime()
-    const createdAt = new Date(request.createdAt).getTime()
-    if (now - createdAt > 30000) {
-      request.status = 'completed'
-    } else if (now - createdAt > 10000) {
-      request.status = 'viewed'
-    }
-
-    return request
+    // In a real implementation, you would download the signed document from the e-signature provider.
+    // For this mock, we'll just return a dummy PDF buffer.
+    return Buffer.from('dummy pdf content')
   }
 }
