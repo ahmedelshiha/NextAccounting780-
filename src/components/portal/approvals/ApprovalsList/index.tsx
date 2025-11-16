@@ -11,6 +11,7 @@ import { ApprovalsTable } from "./ApprovalsTable";
 import { ApprovalsFilters } from "./ApprovalsFilters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { ApprovalStatus } from "@/types/approvals";
 import type { ApprovalFilters } from "@/types/approvals";
 
 interface ApprovalsListProps {
@@ -19,7 +20,7 @@ interface ApprovalsListProps {
 
 export function ApprovalsList({ onApprovalSelect }: ApprovalsListProps) {
   const [filters, setFilters] = useState<ApprovalFilters>({
-    status: "PENDING",
+    status: ApprovalStatus.PENDING,
     sortBy: "requestedAt",
     sortOrder: "desc",
     limit: 20,
