@@ -23,21 +23,22 @@ export const GET = withTenantContext(async (request: NextRequest) => {
       select: {
         id: true,
         number: true,
-        amount: true,
+        totalCents: true,
         currency: true,
         status: true,
-        issuedAt: true,
+        paidAt: true,
         createdAt: true,
       },
     })
 
     const formattedInvoices = invoices.map((inv) => ({
       id: inv.id,
-      invoiceNumber: inv.number,
-      date: inv.issuedAt?.toISOString() || inv.createdAt.toISOString(),
-      amount: inv.amount,
+      invoiceNumber: inv.number || 'INV-' + inv.id.slice(0, 8),
+      date: inv.createdAt.toISOString(),
+      amount: inv.totalCents / 100,
       currency: inv.currency || 'USD',
-      status: (inv.status?.toLowerCase() || 'pending') as 'paid' | 'pending' | 'overdue',
+      status: (inv.status === 'PAID' ? 'paid' : inv.paidAt ? 'paid' : 'pending') as 'paid' | 'pending' | 'overdue',
+      pdfUrl: null,
     }))
 
     return NextResponse.json({

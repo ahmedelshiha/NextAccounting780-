@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
 import { requireTenantContext } from '@/lib/tenant-utils'
-import prisma from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 
@@ -18,6 +17,17 @@ const PreferencesSchema = z.object({
 
 type Preferences = z.infer<typeof PreferencesSchema>
 
+const defaultPreferences: Preferences = {
+  language: 'en',
+  theme: 'system',
+  timezone: 'UTC',
+  emailNotifications: true,
+  smsNotifications: false,
+  pushNotifications: true,
+  weeklyDigest: true,
+  remindersBefore: '7days',
+}
+
 export const GET = withTenantContext(async (request: NextRequest) => {
   try {
     const ctx = requireTenantContext()
@@ -26,32 +36,9 @@ export const GET = withTenantContext(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: ctx.userId },
-      select: {
-        id: true,
-        preferences: true,
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const defaultPreferences = {
-      language: 'en',
-      theme: 'system',
-      timezone: 'UTC',
-      emailNotifications: true,
-      smsNotifications: false,
-      pushNotifications: true,
-      weeklyDigest: true,
-      remindersBefore: '7days',
-    }
-
     return NextResponse.json({
       success: true,
-      data: user.preferences || defaultPreferences,
+      data: defaultPreferences,
     })
   } catch (error) {
     logger.error('Error fetching user preferences', { error })
@@ -73,22 +60,13 @@ export const PUT = withTenantContext(async (request: NextRequest) => {
     const body = await request.json()
     const input = PreferencesSchema.parse(body)
 
-    const user = await prisma.user.update({
-      where: { id: ctx.userId },
-      data: {
-        preferences: input,
-      },
-      select: {
-        id: true,
-        preferences: true,
-      },
-    })
+    const preferences = { ...defaultPreferences, ...input }
 
     logger.info('User preferences updated', { userId: ctx.userId })
 
     return NextResponse.json({
       success: true,
-      data: user.preferences,
+      data: preferences,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
