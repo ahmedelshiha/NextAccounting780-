@@ -1,424 +1,786 @@
-# Developer Guide - Portal-Admin Integration
+# Developer Onboarding Guide
 
-**For**: Developers working on the Portal-Admin integration project  
-**Updated**: November 2024  
-**Status**: Active - Updated regularly
+**For**: New developers joining the Portal-Admin Integration project  
+**Duration**: 3-4 hours to read completely  
+**Last Updated**: November 2024
 
 ---
 
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
+1. [Quick Start (15 minutes)](#quick-start)
 2. [Project Structure](#project-structure)
-3. [Code Patterns](#code-patterns)
-4. [Common Tasks](#common-tasks)
-5. [Testing](#testing)
-6. [Git Workflow](#git-workflow)
-7. [Troubleshooting](#troubleshooting)
+3. [Code Patterns & Conventions](#code-patterns--conventions)
+4. [Working with Shared Code](#working-with-shared-code)
+5. [Creating Features](#creating-features)
+6. [Testing Guidelines](#testing-guidelines)
+7. [Common Tasks](#common-tasks)
+8. [Troubleshooting](#troubleshooting)
+9. [Resources](#resources)
 
 ---
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL (via Neon or local)
-- Environment variables configured (.env)
-
-### Initial Setup
+### Get Your Environment Running (5 min)
 
 ```bash
-# Install dependencies
+# 1. Clone repository
+git clone <repo-url>
+cd <project-dir>
+
+# 2. Install dependencies
+npm install
+# or
 pnpm install
 
-# Setup database
-pnpm prisma:generate
-pnpm prisma:migrate
+# 3. Setup environment variables
+cp .env.example .env.local
+# Edit .env.local with your values
 
-# Start development server
-pnpm dev
+# 4. Setup database
+npx prisma migrate dev
+npx prisma db seed
 
-# Run tests
-pnpm test
-
-# Run linting
-pnpm lint
+# 5. Start development server
+npm run dev
+# Application available at http://localhost:3000
 ```
 
-### Development Server
+### Verify Setup (10 min)
 
-The development server runs at `http://localhost:3000`
+```bash
+# Check TypeScript
+npm run type-check
 
-- Portal: `http://localhost:3000/portal`
-- Admin: `http://localhost:3000/admin`
-- API: `http://localhost:3000/api`
+# Run linting
+npm run lint
+
+# Run tests
+npm run test
+
+# Run build
+npm run build
+
+# If all pass, you're good to go! ✅
+```
+
+### Make Your First Change (5 min)
+
+```bash
+# 1. Create a feature branch
+git checkout -b feat/your-feature-name
+
+# 2. Make a small change (e.g., add a console.log)
+# 3. Test it
+npm run test
+npm run type-check
+
+# 4. Commit
+git add .
+git commit -m "feat: describe your change"
+
+# 5. Push
+git push origin feat/your-feature-name
+```
 
 ---
 
 ## Project Structure
 
+### High-Level Organization
+
 ```
-src/
-├── app/                          # Next.js app directory
-│   ├── api/                      # API routes
-│   │   ├── services/             # Service endpoints
-│   │   ├── bookings/             # Booking endpoints
-│   │   ├── tasks/                # Task endpoints
-│   │   └── [entity]/             # Other entity APIs
-│   ├── admin/                    # Admin dashboard pages
-│   ├── portal/                   # Client portal pages
-│   └── layout.tsx                # Root layout
-│
-├── components/
-│   ├── shared/                   # Shared components (15+)
-│   │   ├── cards/                # Display cards
-│   │   ├── forms/                # Form components
-│   │   ├── inputs/               # Input widgets
-│   │   ├── tables/               # Table components
-│   │   ├── widgets/              # Utility components
-│   │   └── notifications/        # Notification components
-│   ├── admin/                    # Admin-only components
-│   ├── portal/                   # Portal-only components
-│   └── ui/                       # Base UI components (shadcn)
-│
-├── hooks/
-│   ├── shared/                   # Shared hooks (17)
-│   │   ├── useServices.ts        # Data fetching hooks
-│   │   ├── useFilters.ts         # State management
-│   │   ├── useCanAction.ts       # Permission checks
+project/
+├── src/
+│   ├── app/                    ← Next.js pages and routes
+│   │   ├── api/               ← API endpoints
+│   │   ├── admin/             ← Admin pages
+│   │   ├── portal/            ← Client portal pages
 │   │   └── ...
-│   ├── admin/                    # Admin-specific hooks
-│   └── (existing hooks)          # Legacy hooks
-│
-├── lib/
-│   ├── shared/                   # Shared utilities (formatters, validators)
-│   ├── api-route-factory.ts      # API route helpers
-│   ├── auth-middleware.ts        # Auth wrappers
-│   ├── use-permissions.ts        # Permission checks
-│   ├── prisma.ts                 # Prisma client
+│   ├── components/            ← React components
+│   │   ├── shared/            ← Reusable components (15+)
+│   │   ├── admin/             ← Admin-only components
+│   │   ├── portal/            ← Portal-only components
+│   │   └── ui/                ← shadcn/ui components
+│   ├── hooks/                 ← React hooks
+│   │   ├── shared/            ← Shared hooks (18+)
+│   │   └── ...
+│   ├── lib/                   ← Utilities & helpers
+│   │   ├── shared/            ← Shared utilities
+│   │   ├── auth-middleware.ts ← API auth helpers
+│   │   ├── api-response.ts    ← Standard response format
+│   │   ├── permissions.ts     ← RBAC utilities
+│   │   └── ...
+│   ├── types/                 ← TypeScript type definitions
+│   │   ├── shared/            ← Shared entity types
+│   │   └── ...
+│   ├── schemas/               ← Zod validation schemas
+│   │   ├── shared/            ← Shared schemas
+│   │   └── ...
 │   └── ...
-│
-├── types/
-│   ├── shared/                   # Shared entity types
-│   │   ├── entities/             # Type definitions
-│   │   └── index.ts              # Main exports
-│   └── ...
-│
-├── schemas/
-│   ├─�� shared/                   # Shared Zod schemas
-│   │   ├── entities/             # Create/Update/Filter schemas
-│   │   └── index.ts              # Main exports
-│   └── ...
-│
-└── styles/
-    ├── globals.css               # Global styles
-    └── dark-mode.css             # Dark mode styles
+├── tests/                     ← Integration/E2E tests
+├── e2e/                       ← Playwright E2E tests
+├── prisma/                    ← Database schema & migrations
+├── templates/                 ← Code generation templates
+├── docs/                      ← Documentation
+│   ├── DEVELOPER_GUIDE.md     ← This file
+│   ├── portal/                ← Feature documentation
+│   └── api/                   ← API documentation
+├── .env.example               ← Environment variables template
+├── package.json
+├── tsconfig.json
+├── eslint.config.mjs
+└── vitest.config.ts
+```
+
+### Key Directories Explained
+
+| Directory | Purpose | Typical Files |
+|-----------|---------|---|
+| `src/app/api/` | API endpoints | `GET`, `POST`, `PUT`, `DELETE` handlers |
+| `src/components/shared/` | Reusable UI components | `ServiceCard`, `BookingForm`, etc. |
+| `src/hooks/shared/` | Reusable React hooks | `useServices`, `useBookings`, etc. |
+| `src/lib/shared/` | Shared utilities | formatters, validators, transformers |
+| `src/types/shared/` | TypeScript types | Entity types, API types |
+| `src/schemas/shared/` | Zod validation | Create/Update/Filter schemas |
+| `prisma/` | Database | Schema, migrations, seed script |
+| `tests/` | Integration tests | Complex scenario testing |
+| `e2e/` | E2E tests | Full user workflows |
+| `docs/` | Documentation | Guides, architecture, features |
+| `templates/` | Code scaffolding | Component, hook, API templates |
+
+---
+
+## Code Patterns & Conventions
+
+### 1. Components
+
+**Location**: `src/components/shared/`
+
+**Pattern**: All components follow this structure:
+- Props interface with JSDoc
+- Dual variant support (portal/admin)
+- Permission checks with `usePermissions()`
+- Loading/error states
+- TypeScript generics for data
+
+**Example**:
+```tsx
+interface ServiceCardProps {
+  service: Service
+  variant?: 'portal' | 'admin'
+  onEdit?: () => void
+  loading?: boolean
+  error?: string | null
+}
+
+export function ServiceCard({
+  service,
+  variant = 'portal',
+  onEdit,
+  loading = false,
+  error = null,
+}: ServiceCardProps) {
+  const { can } = usePermissions()
+
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error}</div>
+
+  if (variant === 'admin' && can('service:edit')) {
+    return <div>{/* Admin content */}</div>
+  }
+
+  return <div>{/* Portal content */}</div>
+}
+```
+
+**When to create shared components**:
+- ✅ Used in both portal and admin areas
+- ✅ Reusable for multiple features
+- ✅ Complex enough to justify extraction
+- ❌ Not specific to one area
+
+### 2. Hooks
+
+**Location**: `src/hooks/shared/`
+
+**Pattern**: SWR-based data fetching with filters
+- Takes optional filters parameter
+- Returns `{ data, error, isLoading, mutate, hasMore, total }`
+- Memoized for performance
+- Supports pagination and filtering
+
+**Example**:
+```ts
+export function useServices(filters: ServiceFilters = {}) {
+  const { data, error, mutate } = useSWR(
+    `/api/services?${buildQuery(filters)}`,
+    apiFetch,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+
+  return useMemo(() => ({
+    data: data?.data || [],
+    error,
+    isLoading: !data && !error,
+    mutate,
+    hasMore: data?.meta?.hasMore || false,
+    total: data?.meta?.total || 0,
+  }), [data, error, mutate])
+}
+```
+
+**Hook naming convention**:
+- `useData()` - Fetch data
+- `useFilters()` - Manage filters
+- `usePermissions()` - Check permissions
+- `useFormState()` - Form management
+
+### 3. API Routes
+
+**Location**: `src/app/api/`
+
+**Pattern**: Unified endpoints with role-based filtering
+- Use `withTenantAuth` middleware
+- Validate input with Zod schemas
+- Return standard response format
+- Handle all error cases
+
+**Example**:
+```ts
+import { withTenantAuth } from '@/lib/auth-middleware'
+import { respond } from '@/lib/api-response'
+
+export const GET = withTenantAuth(async (request) => {
+  try {
+    const services = await prisma.service.findMany({
+      where: { tenantId: request.tenantId },
+    })
+    return respond.ok({ data: services })
+  } catch (error) {
+    return respond.serverError('Failed to fetch services')
+  }
+})
+
+export const POST = withTenantAuth(async (request) => {
+  try {
+    const body = await request.json()
+    const validated = ServiceCreateSchema.parse(body)
+    
+    const service = await prisma.service.create({
+      data: { ...validated, tenantId: request.tenantId },
+    })
+    
+    return respond.created(service)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return respond.badRequest('Invalid input', error.errors)
+    }
+    return respond.serverError()
+  }
+})
+```
+
+### 4. Types & Schemas
+
+**Location**: `src/types/shared/` and `src/schemas/shared/`
+
+**Pattern**: Shared type definitions + Zod schemas
+- Define once, use everywhere
+- Zod schemas auto-generate TypeScript types
+- Separate Create/Update/Filter variants
+
+**Example**:
+```ts
+// Define schema
+const ServiceCreateSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().positive().optional(),
+  duration: z.number().positive(),
+})
+
+// Auto-generate type
+type ServiceCreate = z.infer<typeof ServiceCreateSchema>
+
+// Use in component
+const handleCreate = (data: ServiceCreate) => {
+  // data is fully typed
+}
+```
+
+### 5. Permissions
+
+**Pattern**: Role-based access control with fine-grained checks
+- Use `usePermissions()` in components
+- Use `withAdminAuth` for admin endpoints
+- Use `withPermissionAuth` for fine-grained control
+
+**Example**:
+```tsx
+// In component
+const { can } = usePermissions()
+if (!can('service:delete')) {
+  return <div>No permission</div>
+}
+
+// In API route
+export const DELETE = withAdminAuth(async (request) => {
+  if (request.userRole !== 'ADMIN') {
+    return respond.forbidden()
+  }
+  // ...
+})
+```
+
+### 6. Error Handling
+
+**Pattern**: Standard error responses
+- Use `respond` helper for consistent format
+- Validate all inputs
+- Handle permissions, not found, validation errors
+
+**Example**:
+```ts
+import { respond } from '@/lib/api-response'
+
+// In API route
+try {
+  const data = await fetch(...)
+  return respond.ok(data)
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    return respond.badRequest('Invalid input', error.errors)
+  }
+  return respond.serverError('Failed to process request')
+}
 ```
 
 ---
 
-## Code Patterns
+## Working with Shared Code
 
-### 1. API Routes
+### Using Shared Components
 
-**Pattern**: Use auth middleware + API route factory
+```tsx
+// Import from shared library
+import { ServiceCard } from '@/components/shared'
+import { BookingForm } from '@/components/shared'
 
-```typescript
-// src/app/api/services/route.ts
-import { createListRoute, createCreateRoute } from '@/lib/api-route-factory'
-import { ServiceFilterSchema, ServiceCreateSchema } from '@/schemas/shared'
+// Use with variant
+<ServiceCard 
+  service={service} 
+  variant="admin"
+  onEdit={handleEdit}
+/>
 
-export const GET = createListRoute(
-  async (tenantId, filters) => {
-    const [data, total] = await Promise.all([
-      prisma.service.findMany({
-        where: { tenantId, ...filters },
-        take: filters.limit,
-        skip: filters.offset,
-      }),
-      prisma.service.count({ where: { tenantId, ...filters } }),
-    ])
-    return { data, total }
-  },
-  ServiceFilterSchema
-)
-
-export const POST = createCreateRoute(
-  async (tenantId, data) => {
-    return prisma.service.create({
-      data: { ...data, tenantId },
-    })
-  },
-  ServiceCreateSchema
-)
+// Or portal variant
+<ServiceCard 
+  service={service} 
+  variant="portal"
+  onSelect={handleSelect}
+/>
 ```
 
-### 2. Components
+### Using Shared Hooks
 
-**Pattern**: Support portal/admin variants with permission checks
+```tsx
+// Data fetching hook
+const { data: services, isLoading, error } = useServices({
+  category: 'consulting',
+  limit: 20
+})
 
-```typescript
+// State management hook
+const { filters, addFilter, clearFilters } = useFilters({
+  search: '',
+  status: 'ACTIVE',
+})
+
+// Permission hook
+const { can } = usePermissions()
+if (can('service:edit')) {
+  // Show edit button
+}
+```
+
+### Using Shared Types
+
+```tsx
+import type { Service, Booking, Task } from '@/types/shared'
+
+// Types automatically available
+const service: Service = {
+  id: '1',
+  name: 'Consulting',
+  price: 100,
+  // ...
+}
+
+// Use in components
+interface MyComponentProps {
+  service: Service
+  booking?: Booking
+  tasks: Task[]
+}
+```
+
+### Using Shared Schemas
+
+```ts
+import { ServiceCreateSchema, ServiceFilterSchema } from '@/schemas/shared'
+
+// Validation in API route
+const body = await request.json()
+const validated = ServiceCreateSchema.parse(body)
+
+// Validation in component form
+const form = useForm({
+  resolver: zodResolver(ServiceCreateSchema),
+  defaultValues: { name: '', price: 0 },
+})
+```
+
+---
+
+## Creating Features
+
+### Step 1: Plan Your Feature
+
+**Questions to answer**:
+- [ ] Is this feature used in both portal and admin? (→ create shared)
+- [ ] Do both areas need different implementations? (→ create variants)
+- [ ] What data types are involved?
+- [ ] What API endpoints are needed?
+- [ ] What permissions are required?
+
+### Step 2: Define Types and Schemas
+
+```bash
+# 1. Create type definition
+cp templates/schema.template.ts src/schemas/shared/myfeature.ts
+
+# 2. Define your entity types
+export const MyEntitySchema = z.object({
+  id: z.string().cuid(),
+  name: z.string().min(1),
+  // ...
+})
+
+# 3. Create variants
+export const MyEntityCreateSchema = MyEntitySchema.omit({ id: true })
+export const MyEntityUpdateSchema = MyEntitySchema.partial()
+export const MyEntityFilterSchema = z.object({ ... })
+
+# 4. Export types
+export type MyEntity = z.infer<typeof MyEntitySchema>
+export type MyEntityCreate = z.infer<typeof MyEntityCreateSchema>
+```
+
+### Step 3: Create API Routes
+
+```bash
+# 1. Create API route handler
+mkdir -p src/app/api/myfeature
+cp templates/api-route.template.ts src/app/api/myfeature/route.ts
+
+# 2. Implement GET, POST, PUT, DELETE handlers
+# 3. Add validation with Zod schemas
+# 4. Use withTenantAuth middleware
+# 5. Return respond.ok() or respond.error()
+
+# 6. Test the route
+npm run test
+
+# 7. Type-check
+npm run type-check
+```
+
+### Step 4: Create Hooks
+
+```bash
+# 1. Create hook
+cp templates/hook.template.ts src/hooks/shared/useMyFeature.ts
+
+# 2. Update hook to fetch from your API endpoint
+# 3. Define filter parameters
+# 4. Return data with pagination/error handling
+
+# 5. Test the hook
+npm run test
+```
+
+### Step 5: Create Components
+
+```bash
+# 1. Create component
+cp templates/component.template.tsx src/components/shared/MyFeatureCard.tsx
+
+# 2. Define Props interface
+# 3. Implement both variants (portal/admin)
+# 4. Add permission checks
+# 5. Handle loading/error/success states
+
+# 6. Create form component if needed
+cp templates/component.template.tsx src/components/shared/MyFeatureForm.tsx
+
+# 7. Use react-hook-form + Zod for validation
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { MyFeatureCreateSchema } from '@/schemas/shared'
+
+const form = useForm({
+  resolver: zodResolver(MyFeatureCreateSchema),
+})
+```
+
+### Step 6: Create Tests
+
+```bash
+# 1. Create test file
+cp templates/test.template.ts src/components/shared/__tests__/MyFeatureCard.test.ts
+
+# 2. Test rendering with variants
+# 3. Test user interactions
+# 4. Test permissions
+# 5. Test accessibility
+# 6. Test error handling
+
+# 7. Run tests
+npm run test
+
+# 8. Check coverage
+npm run test:coverage
+```
+
+### Step 7: Integrate into Pages
+
+```tsx
+// src/app/portal/myfeature/page.tsx
 'use client'
 
-import { Service } from '@/types/shared'
-import { usePermissions } from '@/lib/use-permissions'
+import { useState } from 'react'
+import { useMyFeature } from '@/hooks/shared/useMyFeature'
+import { MyFeatureCard } from '@/components/shared/MyFeatureCard'
+import { MyFeatureForm } from '@/components/shared/MyFeatureForm'
 
-interface ServiceCardProps {
-  service: Service
-  variant?: 'portal' | 'admin'
-}
+export default function MyFeaturePage() {
+  const { data, isLoading, error, mutate } = useMyFeature()
+  const [showForm, setShowForm] = useState(false)
 
-export function ServiceCard({ service, variant = 'portal' }: ServiceCardProps) {
-  const { can } = usePermissions()
-
-  return (
-    <div className="service-card">
-      <h3>{service.name}</h3>
-      
-      {variant === 'admin' && can('service:update') && (
-        <button>Edit</button>
-      )}
-      
-      {variant === 'portal' && (
-        <p className="price">${service.price}</p>
-      )}
-    </div>
-  )
-}
-```
-
-### 3. Data Fetching Hooks
-
-**Pattern**: Use SWR with proper typing
-
-```typescript
-import { useServices } from '@/hooks/shared'
-
-export function ServiceList() {
-  const { data, isLoading, error, refresh } = useServices({
-    active: true,
-    limit: 20,
-  })
-
-  if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error: {error.message}</div>
+  const handleCreate = async (formData) => {
+    await fetch('/api/myfeature', {
+      method: 'POST',
+      body: JSON.stringify(formData),
+    })
+    mutate() // Refresh data
+    setShowForm(false)
+  }
 
   return (
     <div>
-      {data.map(service => (
-        <ServiceCard key={service.id} service={service} />
+      <h1>My Feature</h1>
+      {isLoading && <p>Loading...</p>}
+      {error && <p>Error: {error.message}</p>}
+      {data.map(item => (
+        <MyFeatureCard 
+          key={item.id} 
+          data={item} 
+          variant="portal"
+        />
       ))}
-      <button onClick={refresh}>Refresh</button>
+      {showForm && (
+        <MyFeatureForm onSubmit={handleCreate} />
+      )}
     </div>
   )
 }
 ```
 
-### 4. Forms with Validation
+### Step 8: Deploy
 
-**Pattern**: Use react-hook-form + Zod
+```bash
+# 1. Type-check
+npm run type-check
 
-```typescript
-'use client'
+# 2. Lint
+npm run lint
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { ServiceCreateSchema } from '@/schemas/shared'
+# 3. Test
+npm run test
 
-export function ServiceForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(ServiceCreateSchema),
-  })
+# 4. Build
+npm run build
 
-  const onSubmit = async (data) => {
-    const response = await fetch('/api/services', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
-    // Handle response
-  }
+# 5. Commit
+git add .
+git commit -m "feat: add my feature"
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('name')} />
-      {errors.name && <span>{errors.name.message}</span>}
-      <button type="submit">Create</button>
-    </form>
-  )
-}
+# 6. Push
+git push origin feat/my-feature
+
+# 7. Create PR
+# (via GitHub UI)
 ```
 
-### 5. Permission Checks
+---
 
-**Pattern**: Use permission hooks
+## Testing Guidelines
 
-```typescript
-import { useCanAction, useUserRole } from '@/hooks/shared'
+### Unit Tests (Components & Hooks)
 
-export function AdminPanel() {
-  const canManageServices = useCanAction('service', 'manage')
-  const role = useUserRole()
+```bash
+npm run test
+```
 
-  if (!canManageServices) {
-    return <div>Access denied</div>
-  }
+**What to test**:
+- Rendering with different props
+- User interactions (clicks, form input)
+- Permission-based rendering
+- Error and loading states
+- Accessibility (ARIA labels, keyboard nav)
 
-  return <AdminContent />
-}
+**Example**:
+```ts
+describe('ServiceCard', () => {
+  it('renders with portal variant', () => {
+    const service = { id: '1', name: 'Service' }
+    render(<ServiceCard service={service} variant="portal" />)
+    expect(screen.getByText('Service')).toBeInTheDocument()
+  })
+
+  it('calls onEdit when edit button clicked', async () => {
+    const user = userEvent.setup()
+    const onEdit = vi.fn()
+    render(<ServiceCard service={service} variant="admin" onEdit={onEdit} />)
+    await user.click(screen.getByText('Edit'))
+    expect(onEdit).toHaveBeenCalled()
+  })
+})
+```
+
+### Integration Tests
+
+```bash
+npm run test
+```
+
+**What to test**:
+- Multiple components working together
+- API integration
+- State management
+- Complex user workflows
+
+### E2E Tests
+
+```bash
+npm run test:e2e
+```
+
+**What to test**:
+- Full user workflows
+- Critical paths
+- Browser compatibility
+- Responsive design
+
+### Running Tests
+
+```bash
+# Run all tests
+npm run test
+
+# Run specific file
+npm run test -- ServiceCard
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
 ```
 
 ---
 
 ## Common Tasks
 
-### Add a New API Endpoint
-
-1. Create route file: `src/app/api/[entity]/route.ts`
-2. Import route factory and schemas
-3. Implement GET and/or POST handlers
-4. Add tests in `src/app/api/__tests__/`
-
-Example:
-```typescript
-// src/app/api/invoices/route.ts
-import { createListRoute } from '@/lib/api-route-factory'
-
-export const GET = createListRoute(
-  async (tenantId, filters) => { /* ... */ },
-  InvoiceFilterSchema
-)
-```
-
-### Add a New Shared Component
-
-1. Create file in `src/components/shared/[category]/`
-2. Follow component template (see `templates/COMPONENT_TEMPLATE.md`)
-3. Add export to category `index.ts`
-4. Add export to shared `index.ts`
-5. Create test file alongside component
-
-### Add a New Shared Hook
-
-1. Create file in `src/hooks/shared/`
-2. Export type definitions and hook
-3. Add tests in `src/hooks/shared/__tests__/`
-4. Export from `src/hooks/shared/index.ts`
-
-### Update Entity Types
-
-1. Update type in `src/types/shared/entities/[entity].ts`
-2. Update Zod schema in `src/schemas/shared/entities/[entity].ts`
-3. Update API endpoints to use new schema
-4. Run tests to ensure no breaking changes
-
----
-
-## Testing
-
-### Unit Tests (Vitest)
+### Adding a New API Endpoint
 
 ```bash
-pnpm test                    # Run all tests once
-pnpm test:watch             # Watch mode
-pnpm test:coverage          # With coverage report
+# 1. Copy template
+cp templates/api-route.template.ts src/app/api/resources/route.ts
+
+# 2. Update model references
+# 3. Import your Zod schemas
+# 4. Implement GET, POST, PUT, DELETE
+# 5. Use withTenantAuth middleware
+# 6. Return respond.ok/error responses
+# 7. Test thoroughly
+
+npm run test
+npm run type-check
 ```
 
-**Test patterns**:
+### Adding a New Component
 
-```typescript
-import { describe, it, expect, vi } from 'vitest'
-import { useServices } from '@/hooks/shared'
+```bash
+# 1. Copy template
+cp templates/component.template.tsx src/components/shared/MyComponent.tsx
 
-describe('useServices', () => {
-  it('fetches and returns services', async () => {
-    // Mock apiFetch
-    vi.mock('@/lib/api')
-    
-    const { result } = renderHook(() => useServices())
-    
-    expect(result.current.data).toEqual([...])
-  })
+# 2. Update component name
+# 3. Define Props interface
+# 4. Implement both variants
+# 5. Add permission checks
+# 6. Test with both variants
+
+npm run test
+npm run type-check
+```
+
+### Adding a New Hook
+
+```bash
+# 1. Copy template
+cp templates/hook.template.ts src/hooks/shared/useMyHook.ts
+
+# 2. Update hook name
+# 3. Define filter parameters
+# 4. Update API endpoint
+# 5. Test with various filters
+
+npm run test
+npm run type-check
+```
+
+### Adding a New Type
+
+```bash
+# 1. Create type file
+touch src/types/shared/entities/mytype.ts
+
+# 2. Define interface
+export interface MyType {
+  id: string
+  name: string
+  // ...
+}
+
+# 3. Create variants for portal/admin
+export type MyTypePortalView = Omit<MyType, 'adminField'>
+
+# 4. Create Zod schema
+export const MyTypeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
 })
 ```
 
-### E2E Tests (Playwright)
+### Updating a Type
 
-```bash
-pnpm test:e2e               # Run E2E tests
-pnpm test:e2e:debug        # Debug mode with UI
-```
-
-### API Testing
-
-Use REST client or curl:
-
-```bash
-# Test GET endpoint
-curl http://localhost:3000/api/services \
-  -H "Cookie: [session-cookie]" \
-  -H "x-tenant-id: tenant-123"
-
-# Test POST endpoint
-curl http://localhost:3000/api/services \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -H "Cookie: [session-cookie]" \
-  -d '{"name":"New Service"}'
-```
-
----
-
-## Git Workflow
-
-### Branch Naming
-
-```
-feat/[phase]-[feature]      # Feature branch
-fix/[issue-number]          # Bug fix
-docs/[topic]                # Documentation
-test/[feature]              # Test improvements
-```
-
-Examples:
-- `feat/phase-1-shared-hooks`
-- `feat/phase-2-service-api`
-- `fix/123-auth-middleware`
-
-### Commit Messages
-
-Use semantic commits:
-
-```
-feat: Add shared useServices hook
-fix: Auth middleware tenant isolation bug
-docs: Update API response contract
-test: Add comprehensive hook tests
-```
-
-### Pull Requests
-
-1. Create feature branch from `main`
-2. Make changes and commit with semantic messages
-3. Push to remote: `git push origin [branch]`
-4. Create PR with description of changes
-5. Wait for reviews and CI/CD to pass
-6. Merge to main
-
-### Pushing Changes
-
-```bash
-# Stage changes
-git add .
-
-# Commit with semantic message
-git commit -m "feat: [Phase X.Y] Description"
-
-# Push to remote
-git push origin [branch-name]
-
-# Create PR in GitHub UI
-```
+1. Update type definition in `src/types/shared/`
+2. Update Zod schema in `src/schemas/shared/`
+3. Update all usages (components, hooks, API routes)
+4. Run type-check to find affected files
+5. Test thoroughly
 
 ---
 
@@ -426,96 +788,232 @@ git push origin [branch-name]
 
 ### TypeScript Errors
 
-```bash
-# Check TypeScript compilation
-pnpm typecheck
+**Problem**: "Type X is not compatible with type Y"
 
-# Fix TypeScript errors
-pnpm lint:fix
+**Solution**:
+```bash
+# Check all files
+npm run type-check
+
+# Look at the error message
+# Find the file and line number
+# Check if you're using the correct type from src/types/shared/
+
+import type { Service } from '@/types/shared' // ✅ Correct
+import type { Service } from '@/lib/api' // ❌ Wrong location
 ```
 
-**Common errors**:
-- `Type 'X' is not assignable to type 'Y'` - Check type definitions in `src/types/shared/`
-- `Property does not exist` - Ensure imports are correct and types are defined
+### Component Not Rendering
 
-### Auth Errors
+**Problem**: Component shows nothing or console errors
 
-**401 Unauthorized**:
-- Check session cookie is present
-- Verify `getServerSession` is working
-- Ensure user exists in database
-
-**403 Forbidden**:
-- Check user role matches required role
-- Verify permission is granted to role
-- Check tenant isolation headers
-
-### Build Errors
-
+**Solution**:
 ```bash
-# Clean build
-pnpm clean
-pnpm install
-pnpm build
+# 1. Check browser console for errors
+# 2. Add debug logs
+console.log('Props:', props)
+console.log('Permissions:', can('resource:view'))
 
-# Check for missing dependencies
-pnpm lint
+# 3. Check if component is being imported
+import { MyComponent } from '@/components/shared' // ✅ Correct path
 
-# Run type check
-pnpm typecheck
+# 4. Check if component has display name (for debugging)
+MyComponent.displayName = 'MyComponent'
+
+# 5. Run tests to isolate issue
+npm run test -- MyComponent
 ```
 
-### Database Issues
+### API Errors
+
+**Problem**: 401, 403, or 500 errors from API
+
+**Solution**:
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| **401** | Not authenticated | Check session, login |
+| **403** | Forbidden/No permission | Check user role, permissions |
+| **400** | Bad request | Validate input with Zod schema |
+| **404** | Not found | Check resource ID, tenant ID |
+| **500** | Server error | Check server logs, database |
 
 ```bash
-# Reset database
-pnpm prisma:reset
-
-# Generate Prisma client
-pnpm prisma:generate
-
-# View database
-pnpm prisma:studio
+# Check error in API route
+const validated = MySchema.parse(body) // Will throw ZodError if invalid
+// Handle with respond.badRequest(error.errors)
 ```
 
----
+### Hook Returning Undefined
 
-## Important Files Reference
+**Problem**: `useServices()` returns `{ data: [], error: undefined }`
 
-| File | Purpose |
-|------|---------|
-| `src/lib/auth-middleware.ts` | Auth & permission checking |
-| `src/lib/api-route-factory.ts` | API route helpers |
-| `src/lib/permissions.ts` | Permission definitions |
-| `src/lib/use-permissions.ts` | Permission hooks |
-| `src/types/shared/` | Shared type definitions |
-| `src/schemas/shared/` | Zod validation schemas |
-| `src/hooks/shared/` | Shared React hooks |
-| `src/components/shared/` | Shared UI components |
-| `docs/api/AUTH_MIDDLEWARE.md` | Auth middleware docs |
-| `docs/api/RESPONSE_CONTRACT.md` | API response format |
+**Solution**:
+```bash
+# 1. Check API endpoint is correct
+# 2. Check API is responding
+curl http://localhost:3000/api/services
+
+# 3. Add error logging
+const { data, error } = useServices()
+if (error) console.error('Hook error:', error)
+
+# 4. Check filter parameters
+const { data } = useServices({ status: 'ACTIVE' })
+// Make sure API supports this filter
+
+# 5. Check SWR configuration
+// Change dedupingInterval if needed
+const config = { dedupingInterval: 5000 }
+```
+
+### Build Failures
+
+**Problem**: `npm run build` fails
+
+**Solution**:
+```bash
+# 1. Run type-check first
+npm run type-check
+# Fix all TypeScript errors
+
+# 2. Run linting
+npm run lint
+# Fix all linting errors
+
+# 3. Check for missing files
+# All imports must resolve to real files
+
+# 4. Try build again
+npm run build
+
+# 5. If still failing, check error message
+# Usually points to specific file/line
+```
 
 ---
 
 ## Resources
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs)
-- [React Documentation](https://react.dev)
-- [Zod Documentation](https://zod.dev)
-- [Vitest Documentation](https://vitest.dev)
+### Project Documentation
+- **Strategic Overview**: `PORTAL_ADMIN_INTEGRATION_ROADMAP.md`
+- **Task Details**: `PORTAL_ADMIN_INTEGRATION_ROADMAP_todo.md`
+- **Quick Reference**: `docs/INTEGRATION_ROADMAP_INDEX.md`
+- **Auth Middleware**: `docs/api/AUTH_MIDDLEWARE.md`
+- **API Contracts**: `docs/api/RESPONSE_CONTRACT.md`
+
+### Code Templates
+- **Component Template**: `templates/component.template.tsx`
+- **Hook Template**: `templates/hook.template.ts`
+- **API Route Template**: `templates/api-route.template.ts`
+- **Test Template**: `templates/test.template.ts`
+- **Schema Template**: `templates/schema.template.ts`
+
+### Feature Documentation
+- **Approvals**: `docs/portal/Approvals Feature*.md`
+- **Bills**: `docs/portal/Bills Feature*.md`
+- **Compliance**: `docs/portal/Compliance Feature*.md`
+- **KYC**: `docs/portal/KYC*.md`
+- **Messages**: `docs/portal/Messages*.md`
+
+### External Resources
+- [Next.js Docs](https://nextjs.org/docs)
+- [React Docs](https://react.dev)
+- [Prisma Docs](https://www.prisma.io/docs)
+- [Zod Docs](https://zod.dev)
+- [React Hook Form Docs](https://react-hook-form.com)
+- [shadcn/ui Docs](https://ui.shadcn.com)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs)
+- [ESLint Docs](https://eslint.org/docs)
+- [Vitest Docs](https://vitest.dev)
+
+### Getting Help
+- **Questions about patterns?** → See `src/components/shared/README.md`
+- **Questions about types?** → See `src/types/shared/`
+- **Questions about hooks?** → See `src/hooks/shared/`
+- **Questions about APIs?** → See `src/app/api/`
+- **Questions about testing?** → See test files in `src/**/__tests__/`
 
 ---
 
-## Getting Help
+## Development Workflow Summary
 
-1. Check this guide and FAQs
-2. Look at similar implementations in existing code
-3. Review test files for examples
-4. Ask team members in Slack or PR comments
-5. Create GitHub issue if it's a blocker
+```
+1. PLAN
+   ├─ Read requirements/documentation
+   ├─ Check existing implementations
+   └─ Decide on architecture
+
+2. CODE
+   ├─ Copy template
+   ├─ Implement functionality
+   ├─ Follow conventions
+   └─ Add tests
+
+3. VALIDATE
+   ├─ npm run type-check
+   ├─ npm run lint
+   ├─ npm run test
+   └─ npm run build
+
+4. COMMIT
+   ├─ git add .
+   ├─ git commit -m "feat: description"
+   └─ git push origin branch-name
+
+5. REVIEW
+   ├─ Create PR
+   ├─ Wait for reviews
+   ├─ Address feedback
+   └─ Merge to main
+```
 
 ---
 
-**Questions?** See [docs/INTEGRATION_ROADMAP_INDEX.md](./INTEGRATION_ROADMAP_INDEX.md) for quick reference.
+## Quick Command Reference
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run type-check` | Check TypeScript errors |
+| `npm run lint` | Check code style |
+| `npm run lint:fix` | Auto-fix code style |
+| `npm run test` | Run all tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Generate coverage report |
+| `npm run test:e2e` | Run E2E tests |
+| `prisma migrate dev` | Create and run migration |
+| `prisma studio` | Open database UI |
+| `prisma db seed` | Run seed script |
+
+---
+
+## Final Checklist for New Developers
+
+- [ ] Project cloned and dependencies installed
+- [ ] `npm run dev` works without errors
+- [ ] All tests pass (`npm run test`)
+- [ ] TypeScript compilation succeeds (`npm run type-check`)
+- [ ] Read `PORTAL_ADMIN_INTEGRATION_ROADMAP.md`
+- [ ] Read `docs/INTEGRATION_ROADMAP_INDEX.md`
+- [ ] Explored `src/components/shared/` directory
+- [ ] Explored `src/hooks/shared/` directory
+- [ ] Reviewed existing feature implementations
+- [ ] Made first commit (small change)
+- [ ] Familiar with code templates in `templates/`
+- [ ] Know where to find help/resources
+
+---
+
+**Welcome to the team! 🎉**
+
+You now have everything you need to be productive. Start with a small feature, follow the patterns, and gradually explore more complex parts of the codebase.
+
+**Remember**: When in doubt, look at existing implementations—they're your best reference!
+
+---
+
+**Version**: 1.0  
+**Last Updated**: November 2024  
+**Maintained By**: Development Team
