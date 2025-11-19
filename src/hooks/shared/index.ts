@@ -10,8 +10,8 @@ export { useApprovals, type ApprovalFilters, type UseApprovalsResponse } from '.
 
 // State management hooks
 export { useFilters, type FilterValue } from './useFilters'
-export { useTableState, type TableState } from './useTableState'
-export { useFormState, type FormState } from './useFormState'
+export { useTableState, type TableState, type SortState } from './useTableState'
+export { useFormState } from './useFormState'
 export { useSelection, type SelectionState } from './useSelection'
 
 // Permission & session hooks
