@@ -156,7 +156,7 @@ export const POST = withTenantContext(
       // Rate limiting for creation
       const rl = await applyRateLimit(`services-create:${ctx.userId}`, 10, 3600_000)
       if (rl && !rl.allowed) {
-        return respond.rateLimitExceeded('Too many service creation attempts')
+        return respond.tooMany('Too many service creation attempts')
       }
 
       let body = await request.json()
