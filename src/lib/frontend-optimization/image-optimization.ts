@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import { ReactNode } from 'react'
 
 /**
  * Image optimization guidelines for different use cases
@@ -88,11 +87,6 @@ export function OptimizedImage({
     />
   )
 }
-
-/**
- * Re-export Next.js Image for convenience
- */
-export { Image }
 
 /**
  * Responsive image with srcset for different screen sizes

@@ -60,7 +60,7 @@ class PerformanceLogger {
   /**
    * Measure sync function execution time
    */
-  measure Sync<T>(label: string, fn: () => T): T {
+  measureSync<T>(label: string, fn: () => T): T {
     const start = performance.now()
     try {
       return fn()
