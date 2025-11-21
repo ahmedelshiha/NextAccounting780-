@@ -3,6 +3,7 @@ import { withAdminAuth } from '@/lib/api-wrapper'
 import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { tenantContext } from '@/lib/tenant-context'
 import { z } from 'zod'
 
 const UserListFilterSchema = z.object({
