@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
@@ -22,11 +23,12 @@ type SettingsInput = z.infer<typeof SettingsUpdateSchema>
  * Get user preferences and settings
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
       // Fetch user settings from database
       const userSettings = await prisma.user.findUnique({
-        where: { id: user.id },
+        where: { id: ctx.userId },
         select: {
           id: true,
           preferences: true, // Assuming a JSON field in the schema
@@ -64,14 +66,16 @@ export const GET = withTenantContext(
  * Update user preferences and settings
  */
 export const PUT = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId } = ctx
       const body = await request.json()
       const input = SettingsUpdateSchema.parse(body)
 
       // Get current settings
       const currentUser = await prisma.user.findUnique({
-        where: { id: user.id },
+        where: { id: ctx.userId },
         select: { preferences: true },
       })
 
@@ -93,7 +97,7 @@ export const PUT = withTenantContext(
 
       // Update settings
       const updated = await prisma.user.update({
-        where: { id: user.id },
+        where: { id: ctx.userId },
         data: {
           preferences: updatedSettings,
         },
@@ -106,10 +110,10 @@ export const PUT = withTenantContext(
       // Log audit event
       await logAudit({
         tenantId,
-        userId: user.id,
+        userId: ctx.userId,
         action: 'SETTINGS_UPDATED',
         entity: 'UserSettings',
-        entityId: user.id,
+        entityId: ctx.userId,
         changes: input,
       })
 

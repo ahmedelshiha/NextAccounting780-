@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
@@ -20,10 +21,11 @@ const ProfileUpdateSchema = z.object({
  * Get current user profile
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
       const profile = await prisma.user.findUnique({
-        where: { id: user.id },
+        where: { id: ctx.userId },
         select: {
           id: true,
           email: true,
@@ -60,19 +62,20 @@ export const GET = withTenantContext(
  * Update current user profile
  */
 export const PUT = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
       const body = await request.json()
       const input = ProfileUpdateSchema.parse(body)
 
       // Prevent email changes (security - require email verification)
-      if (input.email && input.email !== user.email) {
+      if (input.email && input.email !== ctx.userEmail) {
         return respond.forbidden('Email changes require verification. Contact support.')
       }
 
       // Update profile
       const updated = await prisma.user.update({
-        where: { id: user.id },
+        where: { id: ctx.userId },
         data: {
           name: input.name,
           image: input.image,
@@ -98,11 +101,11 @@ export const PUT = withTenantContext(
 
       // Log audit event
       await logAudit({
-        tenantId,
-        userId: user.id,
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
         action: 'PROFILE_UPDATED',
         entity: 'User',
-        entityId: user.id,
+        entityId: ctx.userId,
         changes: input,
       })
 

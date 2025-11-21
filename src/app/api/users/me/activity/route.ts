@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -26,14 +27,16 @@ const FilterSchema = z.object({
  * - dateTo: End date for activity
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId } = ctx
       const { searchParams } = new URL(request.url)
       const filters = FilterSchema.parse(Object.fromEntries(searchParams))
 
       // Build query
       const where: any = {
-        userId: user.id,
+        userId,
         tenantId,
       }
 

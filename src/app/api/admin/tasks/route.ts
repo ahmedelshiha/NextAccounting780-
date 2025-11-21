@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { TaskFilterSchema, TaskCreateSchema } from '@/schemas/shared/entities/task'
 import { TaskStatus } from '@/types/shared/entities/task'
@@ -13,10 +14,13 @@ import { z } from 'zod'
  * Supports advanced filtering and sorting
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { user, tenantId } = ctx
+
       // Verify admin access
-      if (!user.isAdmin) {
+      if (!user?.role !== 'SUPER_ADMIN' && !user?.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can access this endpoint')
       }
 
@@ -149,10 +153,13 @@ export const GET = withTenantContext(
  * Create a new task (admin only)
  */
 export const POST = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { user, tenantId } = ctx
+
       // Verify admin access
-      if (!user.isAdmin) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can create tasks')
       }
 
@@ -181,7 +188,7 @@ export const POST = withTenantContext(
 
       // Log audit event
       await logAudit({
-        userId: user.id,
+        userId: ctx.userId,
         action: 'TASK_CREATED',
         entity: 'Task',
         entityId: task.id,

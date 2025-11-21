@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
 import { TaskStatus, TaskPriority } from '@/types/shared/entities/task'
@@ -9,9 +10,12 @@ import { TaskStatus, TaskPriority } from '@/types/shared/entities/task'
  * Get task statistics for dashboard (admin only)
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
-      if (!user.isAdmin) {
+      const ctx = requireTenantContext()
+      const { tenantId } = ctx
+
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can access this endpoint')
       }
 

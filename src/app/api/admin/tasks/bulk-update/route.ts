@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { TaskStatusSchema, TaskPrioritySchema } from '@/schemas/shared/entities/task'
 import prisma from '@/lib/prisma'
@@ -10,9 +11,12 @@ import { z } from 'zod'
  * Perform bulk operations on multiple tasks (admin only)
  */
 export const POST = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
-      if (!user.isAdmin) {
+      const ctx = requireTenantContext()
+      const { tenantId } = ctx
+
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can perform bulk operations')
       }
 

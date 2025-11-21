@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { TaskUpdateSchema } from '@/schemas/shared/entities/task'
 import { prisma } from '@/lib/prisma'
@@ -11,8 +12,10 @@ import { z } from 'zod'
  * Get task details with comments
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId } = ctx
       const taskId = (await params).id
 
       const task = await prisma.task.findFirst({
@@ -66,7 +69,7 @@ export const GET = withTenantContext(
       }
 
       // Check authorization: non-admins can only view their own tasks
-      if (!user.isAdmin && task.assigneeId !== user.id) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN') && task.assigneeId !== userId) {
         return respond.forbidden('You do not have access to this task')
       }
 
@@ -84,8 +87,10 @@ export const GET = withTenantContext(
  * Update a task (admin or assignee)
  */
 export const PUT = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId } = ctx
       const taskId = (await params).id
 
       // Verify task exists and get current state
@@ -101,7 +106,7 @@ export const PUT = withTenantContext(
       }
 
       // Check authorization: only admins or assignees can update
-      if (!user.isAdmin && existingTask.assigneeId !== user.id) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN') && existingTask.assigneeId !== userId) {
         return respond.forbidden('You do not have permission to update this task')
       }
 
@@ -156,7 +161,7 @@ export const PUT = withTenantContext(
       if (Object.keys(changes).length > 0) {
         await logAudit({
           tenantId,
-          userId: user.id,
+          userId: ctx.userId,
           action: 'TASK_UPDATED',
           entity: 'Task',
           entityId: taskId,
@@ -181,10 +186,12 @@ export const PUT = withTenantContext(
  * Delete a task (admin only)
  */
 export const DELETE = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId } = ctx
       // Only admins can delete tasks
-      if (!user.isAdmin) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can delete tasks')
       }
 
@@ -205,7 +212,7 @@ export const DELETE = withTenantContext(
       // Log audit event before deletion
       await logAudit({
         tenantId,
-        userId: user.id,
+        userId: ctx.userId,
         action: 'TASK_DELETED',
         entity: 'Task',
         entityId: taskId,

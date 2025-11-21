@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { TaskFilterSchema, TaskCreateSchema } from '@/schemas/shared/entities/task'
 import { TaskStatus } from '@/types/shared/entities/task'
@@ -13,8 +14,11 @@ import { z } from 'zod'
  * Supports filtering by status, priority, assignee, and date range
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { userId: userId_, tenantId } = ctx
+
       const { searchParams } = new URL(request.url)
 
       // Parse and validate filters
@@ -63,9 +67,9 @@ export const GET = withTenantContext(
       // Filter by assignee
       if (filters.assigneeId) {
         where.assigneeId = filters.assigneeId
-      } else if (!user.isAdmin) {
+      } else if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         // Non-admin users only see their own tasks
-        where.OR = [{ assigneeId: user.id }, { assigneeId: null }]
+        where.OR = [{ assigneeId: userId_ }, { assigneeId: null }]
       }
 
       // Search in title and description

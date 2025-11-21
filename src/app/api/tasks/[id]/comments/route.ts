@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { respond } from '@/lib/api-response'
 import { TaskCommentCreateSchema, TaskCommentUpdateSchema } from '@/schemas/shared/entities/task'
 import { prisma } from '@/lib/prisma'
@@ -11,8 +12,10 @@ import { z } from 'zod'
  * Get all comments for a task, with nested replies
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId } = ctx
       const taskId = (await params).id
 
       // Verify task exists and user has access
@@ -28,7 +31,7 @@ export const GET = withTenantContext(
       }
 
       // Check authorization: non-admins can only view comments on their assigned tasks
-      if (!user.isAdmin && task.assigneeId !== user.id) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN') && task.assigneeId !== userId) {
         return respond.forbidden('You do not have access to this task')
       }
 
@@ -103,8 +106,10 @@ export const GET = withTenantContext(
  * Create a new comment on a task
  */
 export const POST = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId } = ctx
       const taskId = (await params).id
 
       // Verify task exists and user has access
@@ -120,7 +125,7 @@ export const POST = withTenantContext(
       }
 
       // Check authorization: non-admins can only comment on their assigned tasks
-      if (!user.isAdmin && task.assigneeId !== user.id) {
+      if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN') && task.assigneeId !== userId) {
         return respond.forbidden('You do not have access to this task')
       }
 
@@ -145,7 +150,7 @@ export const POST = withTenantContext(
       const comment = await prisma.taskComment.create({
         data: {
           taskId,
-          authorId: user.id,
+          authorId: ctx.userId,
           content: input.content,
           parentId: input.parentId || null,
         },
@@ -164,7 +169,7 @@ export const POST = withTenantContext(
       // Log audit event
       await logAudit({
         tenantId,
-        userId: user.id,
+        userId: ctx.userId,
         action: 'TASK_COMMENT_CREATED',
         entity: 'Task',
         entityId: taskId,
