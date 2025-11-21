@@ -110,9 +110,10 @@ export class ApprovalEngine {
       where: { id: approvalId },
       data: {
         status: 'APPROVED',
-        approvedAt: new Date(),
-        approvedBy: approverId,
-        notes,
+        decision: 'APPROVED',
+        decisionAt: new Date(),
+        decisionBy: approverId,
+        decisionNotes: notes,
         metadata,
       },
       include: { approver: true, requester: true },
