@@ -16,6 +16,23 @@ import {
   requestDeduplicator,
 } from './api-optimization'
 
+// Re-export from api-optimization for easier imports
+export {
+  performanceTracker,
+  getPerformanceTarget,
+  respondWithOptimization,
+  requestDeduplicator,
+  getCacheHeaders,
+  PERFORMANCE_TARGETS,
+  CACHE_STRATEGIES,
+  COMPRESSION_SETTINGS,
+  optimizeResponse,
+  createPerformanceTracker,
+  createRequestDeduplicator,
+  createPaginationHelper,
+  paginationHelper,
+} from './api-optimization'
+
 /**
  * Wrap an API handler with performance optimizations
  *
