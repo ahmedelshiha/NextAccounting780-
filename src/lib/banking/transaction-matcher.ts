@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import prisma from '@/lib/prisma'
 
 interface MatchCriteria {
   amountTolerance: number // Tolerance in decimal places (0.01 = 1 cent)
@@ -112,7 +111,7 @@ export async function matchTransactionsToInvoices(
         const invoices = await prisma.invoice.findMany({
           where: {
             tenantId,
-            status: { in: ['ISSUED', 'PARTIAL_PAID'] },
+            status: { in: ['SENT', 'UNPAID'] },
             createdAt: {
               gte: dateMin,
               lte: dateMax,
@@ -120,8 +119,8 @@ export async function matchTransactionsToInvoices(
           },
           select: {
             id: true,
-            totalAmount: true,
-            description: true,
+            totalCents: true,
+            number: true,
           },
         })
 
@@ -132,8 +131,8 @@ export async function matchTransactionsToInvoices(
         for (const invoice of invoices) {
           let score = 0
 
-          // Amount match (primary criteria)
-          const invoiceAmount = Number(invoice.totalAmount)
+          // Amount match (primary criteria) - totalCents is stored in cents
+          const invoiceAmount = Number(invoice.totalCents) / 100
           const amountDiff = Math.abs(txnAmount - invoiceAmount)
 
           if (amountDiff <= criteria.amountTolerance) {
@@ -142,14 +141,9 @@ export async function matchTransactionsToInvoices(
             score += 0.25 // Close match
           }
 
-          // Description similarity
-          const descriptionScore = calculateStringSimilarity(
-            txn.description,
-            invoice.description || ''
-          )
-
-          if (descriptionScore >= criteria.descriptionSimilarity) {
-            score += 0.5 * descriptionScore
+          // Invoice number matching (if transaction description contains invoice number)
+          if (invoice.number && txn.description.includes(invoice.number)) {
+            score += 0.3 // Invoice number match bonus
           }
 
           if (score > bestScore) {
@@ -245,7 +239,7 @@ export async function findPotentialDuplicates(
       if (amountMatch && descriptionSimilarity > 0.8 && dateWindow) {
         duplicates.push({
           id: txn1.id,
-          amount: txn1.amount,
+          amount: txn1.amount.toString(),
           date: txn1.date,
           description: txn1.description,
           duplicates: [txn2.id],
@@ -275,7 +269,7 @@ export async function getMatchingStats(connectionId: string, tenantId: string) {
     where: { tenantId },
     _count: true,
     _sum: {
-      totalAmount: true,
+      totalCents: true,
     },
   })
 
@@ -285,13 +279,13 @@ export async function getMatchingStats(connectionId: string, tenantId: string) {
       matched: transactions.find((g) => g.matched === true)?._count || 0,
       unmatched: transactions.find((g) => g.matched === false)?._count || 0,
       totalAmount: transactions
-        .reduce((sum, group) => sum + parseFloat(group._sum?.amount || '0'), 0)
+        .reduce((sum, group) => sum + parseFloat(group._sum?.amount?.toString() || '0'), 0)
         .toFixed(2),
     },
     invoices: {
       total: invoices.reduce((sum, group) => sum + group._count, 0),
       totalAmount: invoices
-        .reduce((sum, group) => sum + parseFloat(group._sum?.totalAmount || '0'), 0)
+        .reduce((sum, group) => sum + (group._sum?.totalCents || 0) / 100, 0)
         .toFixed(2),
     },
   }

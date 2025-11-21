@@ -1,76 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { withTenantContext } from '@/lib/api-wrapper'
-import { requireTenantContext } from '@/lib/tenant-utils'
+'use server'
+
+import { withTenantAuth } from '@/lib/auth-middleware'
+import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
-import { logAuditSafe } from '@/lib/observability-helpers'
+import { redirect } from 'next/navigation'
 
-async function _GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * GET /api/documents/[id]/download
+ * Download document with permission check and audit logging
+ */
+export const GET = withTenantAuth(async (request, { tenantId, user }, { params }) => {
   try {
-    const { userId, tenantId } = requireTenantContext()
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant context required' }, { status: 400 })
-    }
-
-    const { id } = params
-
-    // Fetch document with tenant isolation
     const document = await prisma.attachment.findFirst({
-      where: { id, tenantId },
+      where: {
+        id: params.id,
+        tenantId,
+      },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     })
 
     if (!document) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return respond.notFound('Document not found')
     }
 
-    // Log download access
-    await logAuditSafe({
-      action: 'documents:download',
-      details: {
-        documentId: document.id,
-        documentName: document.name,
-        documentSize: document.size,
-        downloadedBy: userId,
-      },
-    }).catch(() => {})
+    // Authorization check
+    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+      return respond.forbidden('You do not have access to this document')
+    }
 
-    // Quarantined documents cannot be downloaded
+    // Check if document is quarantined
     if (document.avStatus === 'infected') {
-      return NextResponse.json(
-        { error: 'Document is quarantined and cannot be downloaded' },
-        { status: 403 }
+      return respond.forbidden('This document is quarantined due to security concerns and cannot be downloaded')
+    }
+
+    // Check if document is still pending scan
+    if (document.avStatus === 'pending') {
+      return respond.conflict(
+        'Document is still being scanned. Please wait before downloading.'
       )
     }
 
-    // If document is stored in external provider (Netlify, Supabase)
-    if (document.url) {
-      // Return a redirect to the provider's signed URL
-      // The client will follow the redirect to get the file
-      return NextResponse.redirect(document.url, { status: 303 })
+    // Verify URL exists
+    if (!document.url) {
+      console.error('Document has no URL:', document.id)
+      return respond.serverError('Document URL not found')
     }
 
-    // If no URL is available, document content is not accessible
-    return NextResponse.json(
-      {
-        error: 'Document content not available',
-        details: 'Document was deleted from storage provider',
+    // Log download
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        action: 'documents:download',
+        userId: user.id,
+        resourceType: 'Document',
+        resourceId: document.id,
+        details: {
+          documentName: document.name,
+          documentSize: document.size,
+          downloadedBy: user.id,
+        },
       },
-      { status: 404 }
-    )
-  } catch (error) {
-    console.error('Document download API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
+    }).catch(() => {})
 
-export const GET = withTenantContext(_GET, { requireAuth: true })
+    // Create download record for analytics
+    await prisma.documentAuditLog.create({
+      data: {
+        attachmentId: document.id,
+        action: 'download',
+        performedBy: user.id,
+        performedAt: new Date(),
+        tenantId,
+        details: {
+          userAgent: request.headers.get('user-agent'),
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+        },
+      },
+    }).catch(() => {})
+
+    // Return download response with redirect to signed URL
+    return Response.redirect(document.url, 302)
+  } catch (error) {
+    console.error('Download document error:', error)
+    return respond.serverError()
+  }
+})

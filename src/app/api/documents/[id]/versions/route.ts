@@ -1,162 +1,218 @@
-import { NextRequest, NextResponse } from 'next/server'
+'use server'
+
+import { withTenantAuth } from '@/lib/auth-middleware'
+import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
-import { logAuditSafe } from '@/lib/observability-helpers'
-import { withTenantContext } from '@/lib/api-wrapper'
-import { requireTenantContext } from '@/lib/tenant-utils'
+import { z } from 'zod'
 
-export const GET = withTenantContext(
-  async (request: NextRequest, { params }: { params: { id: string } }) => {
-    try {
-      const { userId, tenantId } = requireTenantContext()!
-      const { id } = params
+/**
+ * GET /api/documents/[id]/versions
+ * Get document version history
+ */
+export const GET = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+  try {
+    const document = await prisma.attachment.findFirst({
+      where: {
+        id: params.id,
+        tenantId,
+      },
+    })
 
-      // Verify document exists and belongs to tenant
-      const document = await prisma.attachment.findFirst({
-        where: { id, tenantId: tenantId! },
-      })
+    if (!document) {
+      return respond.notFound('Document not found')
+    }
 
-      if (!document) {
-        return NextResponse.json({ error: 'Document not found' }, { status: 404 })
-      }
+    // Authorization check
+    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+      return respond.forbidden('You do not have access to this document')
+    }
 
-      // Fetch all versions for this document
-      const versions = await prisma.documentVersion.findMany({
-        where: { attachmentId: id, tenantId: tenantId! },
-        include: {
-          uploader: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
+    // Get all versions
+    const versions = await prisma.documentVersion.findMany({
+      where: {
+        attachmentId: params.id,
+        tenantId,
+      },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
-        orderBy: { versionNumber: 'desc' },
-      })
+      },
+      orderBy: {
+        versionNumber: 'desc',
+      },
+    })
 
-      const formattedVersions = versions.map((version) => ({
+    // Get total count
+    const total = versions.length
+
+    // Format response
+    const formattedVersions = versions.map((version) => ({
+      id: version.id,
+      versionNumber: version.versionNumber,
+      name: version.name,
+      size: version.size,
+      contentType: version.contentType,
+      url: version.url,
+      uploadedAt: version.uploadedAt,
+      uploadedBy: version.uploader,
+      changeDescription: version.changeDescription,
+    }))
+
+    // Log access
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        action: 'documents:view_versions',
+        userId: user.id,
+        resourceType: 'Document',
+        resourceId: document.id,
+      },
+    }).catch(() => {})
+
+    return respond.ok({
+      data: formattedVersions,
+      meta: {
+        total,
+        documentId: params.id,
+      },
+    })
+  } catch (error) {
+    console.error('Get versions error:', error)
+    return respond.serverError()
+  }
+})
+
+/**
+ * POST /api/documents/[id]/versions
+ * Create new version of document
+ */
+export const POST = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+  try {
+    const document = await prisma.attachment.findFirst({
+      where: {
+        id: params.id,
+        tenantId,
+      },
+    })
+
+    if (!document) {
+      return respond.notFound('Document not found')
+    }
+
+    // Authorization
+    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+      return respond.forbidden('You do not have permission to update this document')
+    }
+
+    const formData = await request.formData()
+    const newFile = formData.get('file') as File | null
+    const changeDescription = formData.get('changeDescription') as string | undefined
+
+    if (!newFile) {
+      return respond.badRequest('File is required')
+    }
+
+    // Validation
+    const MAX_FILE_SIZE = 100 * 1024 * 1024
+    if (newFile.size > MAX_FILE_SIZE) {
+      return respond.badRequest('File size exceeds 100MB limit')
+    }
+
+    // Upload new version
+    const { uploadFile } = await import('@/lib/upload-provider')
+    const fileBuffer = Buffer.from(await newFile.arrayBuffer())
+    const versionKey = `${tenantId}/${params.id}/v${Date.now()}/${newFile.name}`
+
+    let versionUrl: string
+    try {
+      const uploadResult = await uploadFile(fileBuffer, versionKey, newFile.type)
+      versionUrl = uploadResult.url
+    } catch (uploadError) {
+      console.error('Version upload error:', uploadError)
+      return respond.serverError('Failed to upload version')
+    }
+
+    // Get latest version number
+    const latestVersion = await prisma.documentVersion.findFirst({
+      where: { attachmentId: params.id },
+      orderBy: { versionNumber: 'desc' },
+      select: { versionNumber: true },
+    })
+
+    const newVersionNumber = (latestVersion?.versionNumber || 0) + 1
+
+    // Create version record
+    const version = await prisma.documentVersion.create({
+      data: {
+        attachmentId: params.id,
+        versionNumber: newVersionNumber,
+        name: newFile.name,
+        size: newFile.size,
+        contentType: newFile.type,
+        key: versionKey,
+        url: versionUrl,
+        uploaderId: user.id,
+        changeDescription: changeDescription || null,
+        tenantId,
+      },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    // Update main document metadata
+    await prisma.attachment.update({
+      where: { id: params.id },
+      data: {
+        name: newFile.name,
+        size: newFile.size,
+        contentType: newFile.type,
+        url: versionUrl,
+      },
+    }).catch(() => {})
+
+    // Log audit
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        action: 'documents:create_version',
+        userId: user.id,
+        resourceType: 'DocumentVersion',
+        resourceId: version.id,
+        details: {
+          documentId: params.id,
+          versionNumber: newVersionNumber,
+          changeDescription,
+        },
+      },
+    }).catch(() => {})
+
+    return respond.created({
+      data: {
         id: version.id,
         versionNumber: version.versionNumber,
         name: version.name,
         size: version.size,
         contentType: version.contentType,
-        uploadedAt: version.uploadedAt.toISOString(),
+        url: version.url,
+        uploadedAt: version.uploadedAt,
+        uploadedBy: version.uploader,
         changeDescription: version.changeDescription,
-        uploadedBy: version.uploader
-          ? {
-              id: version.uploader.id,
-              email: version.uploader.email,
-              name: version.uploader.name,
-            }
-          : null,
-      }))
-
-      return NextResponse.json(
-        {
-          documentId: id,
-          totalVersions: versions.length,
-          versions: formattedVersions,
-        },
-        { status: 200 }
-      )
-    } catch (error) {
-      console.error('Document versions API error:', error)
-      return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 }
-      )
-    }
-  },
-  { requireAuth: true }
-);
-
-export const POST = withTenantContext(
-  async (request: NextRequest, { params }: { params: { id: string } }) => {
-    try {
-      const { userId, tenantId } = requireTenantContext()!
-      const { id } = params
-      const body = await request.json()
-      const { versionNumber, changeDescription } = body
-
-      if (!versionNumber) {
-        return NextResponse.json(
-          { error: 'versionNumber is required' },
-          { status: 400 }
-        )
-      }
-
-      // Verify document exists and belongs to tenant
-      const document = await prisma.attachment.findFirst({
-        where: { id, tenantId: tenantId! },
-      })
-
-      if (!document) {
-        return NextResponse.json({ error: 'Document not found' }, { status: 404 })
-      }
-
-      // Create new version record
-      const newVersion = await prisma.documentVersion.create({
-        data: {
-          attachmentId: id,
-          versionNumber,
-          name: document.name,
-          size: document.size,
-          contentType: document.contentType,
-          key: document.key,
-          url: document.url,
-          uploadedAt: new Date(),
-          uploaderId: userId,
-          changeDescription: changeDescription || undefined,
-          tenantId: tenantId as string,
-        },
-        include: {
-          uploader: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
-        },
-      })
-
-      // Log version creation
-      await logAuditSafe({
-        action: 'documents:create_version',
-        details: {
-          documentId: id,
-          versionNumber,
-          changeDescription,
-        },
-      }).catch(() => {})
-
-      return NextResponse.json(
-        {
-          success: true,
-          version: {
-            id: newVersion.id,
-            versionNumber: newVersion.versionNumber,
-            name: newVersion.name,
-            uploadedAt: newVersion.uploadedAt.toISOString(),
-            changeDescription: newVersion.changeDescription,
-            uploadedBy: newVersion.uploader
-              ? {
-                  id: newVersion.uploader.id,
-                  email: newVersion.uploader.email,
-                  name: newVersion.uploader.name,
-                }
-              : null,
-          },
-        },
-        { status: 201 }
-      )
-    } catch (error) {
-      console.error('Document version creation API error:', error)
-      return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 }
-      )
-    }
-  },
-  { requireAuth: true }
-);
+      },
+    })
+  } catch (error) {
+    console.error('Create version error:', error)
+    return respond.serverError()
+  }
+})

@@ -119,6 +119,10 @@ export default function ExistingBusinessTab({
   const onSubmit = async (data: ExistingBusinessInput) => {
     try {
       setIsLoading(true);
+      
+      // Generate idempotency key for this request
+      const idempotencyKey = crypto.randomUUID();
+      
       const response = await fetch("/api/entities/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -131,6 +135,7 @@ export default function ExistingBusinessTab({
           legalForm: data.legalForm,
           consentVersion: "1.0",
           consentAccepted: data.termsAccepted,
+          idempotencyKey: idempotencyKey,
         }),
       });
 
@@ -141,7 +146,7 @@ export default function ExistingBusinessTab({
 
       const result = await response.json();
       toast.success("Business account setup started!");
-      onComplete(result.data.id);
+      onComplete(result.data.entityId || result.data.id);
     } catch (error) {
       onError(error instanceof Error ? error.message : "Setup failed");
     } finally {

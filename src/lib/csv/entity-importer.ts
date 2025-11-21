@@ -2,6 +2,7 @@
 import { logger } from '@/lib/logger';
 
 import { parse } from 'csv-parse/sync';
+import { z } from 'zod';
 
 const entityRowSchema = z.object({
   country: z.enum(['AE', 'SA', 'EG']).describe('Country code (AE, SA, EG)'),

@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { sendInvitationEmail } from '@/lib/email/invitations';
 import { logger } from '@/lib/logger';
+import { generateToken } from '@/lib/security/token-generator';
 
 export interface CreateInvitationInput {
   email: string;
@@ -43,13 +44,13 @@ export class InvitationService {
 
       // Create invitation
       const invitation = await prisma.$transaction(async (tx) => {
-        // Check if user already exists
+        // Check if user already exists (using the tenantId_email compound unique constraint)
         const existingUser = await tx.user.findUnique({
-          where: { email },
+          where: { tenantId_email: { tenantId, email } },
         });
 
         if (existingUser) {
-          throw new Error('User already exists with this email');
+          throw new Error('User already exists with this email in the tenant');
         }
 
         // Create invitation record
@@ -87,12 +88,14 @@ export class InvitationService {
       }
 
       // Log audit event
-      await logger.audit({
-        action: 'invitation.created',
-        actorId: invitedBy,
-        targetId: email,
-        details: { role, tenantId, entityIds },
-      });
+      if (logger.audit) {
+        await logger.audit({
+          action: 'invitation.created',
+          actorId: invitedBy,
+          targetId: email,
+          details: { role, tenantId, entityIds },
+        });
+      }
 
       return {
         id: invitation.id,
@@ -147,19 +150,27 @@ export class InvitationService {
           },
         });
 
-        // Assign role to user
-        await tx.userRole.create({
-          data: {
+        // Assign role to user via TenantMembership
+        await tx.tenantMembership.upsert({
+          where: {
+            userId_tenantId: {
+              userId,
+              tenantId: inv.tenantId,
+            },
+          },
+          create: {
             userId,
             tenantId: inv.tenantId,
-            role: inv.role,
-            assignedBy: 'system',
+            role: inv.role as any, // role is a string from invitation
+          },
+          update: {
+            role: inv.role as any,
           },
         });
 
         // Link to entities if specified
         if (inv.entityIds && inv.entityIds.length > 0) {
-          await tx.userEntity.createMany({
+          await tx.userOnEntity.createMany({
             data: inv.entityIds.map((entityId) => ({
               userId,
               entityId,
@@ -171,12 +182,14 @@ export class InvitationService {
       });
 
       // Log audit event
-      await logger.audit({
-        action: 'invitation.accepted',
-        actorId: userId,
-        targetId: invitation.email,
-        details: { tenantId: invitation.tenantId, role: invitation.role },
-      });
+      if (logger.audit) {
+        await logger.audit({
+          action: 'invitation.accepted',
+          actorId: userId,
+          targetId: invitation.email,
+          details: { tenantId: invitation.tenantId, role: invitation.role },
+        });
+      }
 
       return {
         success: true,
@@ -207,12 +220,14 @@ export class InvitationService {
         });
 
         // Log audit event
-        await logger.audit({
-          action: 'invitation.cancelled',
-          actorId: cancelledBy,
-          targetId: invitation.email,
-          details: { invitationId },
-        });
+        if (logger.audit) {
+          await logger.audit({
+            action: 'invitation.cancelled',
+            actorId: cancelledBy,
+            targetId: invitation.email,
+            details: { invitationId },
+          });
+        }
       });
     } catch (error) {
       logger.error('Failed to cancel invitation', { invitationId, cancelledBy, error });
@@ -284,12 +299,14 @@ export class InvitationService {
       });
 
       // Log audit event
-      await logger.audit({
-        action: 'invitation.resent',
-        actorId: 'system',
-        targetId: invitation.email,
-        details: { invitationId },
-      });
+      if (logger.audit) {
+        await logger.audit({
+          action: 'invitation.resent',
+          actorId: 'system',
+          targetId: invitation.email,
+          details: { invitationId },
+        });
+      }
     } catch (error) {
       logger.error('Failed to resend invitation', { invitationId, error });
       throw error;

@@ -1,10 +1,6 @@
 import prisma from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-09-30.clover',
-})
+import { getStripeClient } from '@/lib/payments/stripe-client'
 
 export interface DunningResult {
   processed: number
@@ -175,6 +171,7 @@ async function retryPayment(
   currency: string
 ): Promise<boolean> {
   try {
+    const stripe = getStripeClient()
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: currency.toLowerCase(),

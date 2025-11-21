@@ -15,8 +15,9 @@ const _api_GET = async (
   try {
     const ctx = requireTenantContext();
     const userId = ctx.userId;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -30,7 +31,7 @@ const _api_GET = async (
 
     // Get audit history
     const history = await entityService.getAuditHistory(
-      ctx.tenantId!,
+      tenantId,
       params.id,
       limit
     );

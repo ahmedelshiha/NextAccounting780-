@@ -24,15 +24,16 @@ const _api_GET = async (
   try {
     const ctx = requireTenantContext();
     const userId = ctx.userId;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const entity = await entityService.getEntity(ctx.tenantId!, params.id);
+    const entity = await entityService.getEntity(tenantId, params.id);
 
     return NextResponse.json({
       success: true,
@@ -65,8 +66,9 @@ const _api_PATCH = async (
   try {
     const ctx = requireTenantContext();
     const userId = ctx.userId;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -80,7 +82,7 @@ const _api_PATCH = async (
 
     // Update entity
     const entity = await entityService.updateEntity(
-      ctx.tenantId!,
+      tenantId,
       params.id,
       userId,
       input
@@ -128,8 +130,9 @@ const _api_DELETE = async (
   try {
     const ctx = requireTenantContext();
     const userId = ctx.userId;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -141,10 +144,10 @@ const _api_DELETE = async (
 
     if (permanent) {
       // Hard delete (requires archived status)
-      await entityService.deleteEntity(ctx.tenantId!, params.id, userId);
+      await entityService.deleteEntity(tenantId, params.id, userId);
     } else {
       // Soft delete (archive)
-      await entityService.archiveEntity(ctx.tenantId!, params.id, userId);
+      await entityService.archiveEntity(tenantId, params.id, userId);
     }
 
     logger.info("Entity deleted/archived successfully", {

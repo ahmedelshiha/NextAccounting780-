@@ -13,8 +13,9 @@ const _api_GET = async (request: NextRequest) => {
   try {
     const ctx = requireTenantContext();
     const userId = ctx.userId;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -33,7 +34,7 @@ const _api_GET = async (request: NextRequest) => {
       where: {
         obligation: {
           entity: {
-            tenantId: ctx.tenantId!,
+            tenantId: tenantId,
           },
           ...(country && { country }),
           ...(obligationType && { type: obligationType }),

@@ -17,7 +17,7 @@ const _api_GET = async (
     const { id: entityId } = await params;
     const ctx = requireTenantContext();
 
-    if (!ctx.userId) {
+    if (!ctx.userId || !ctx.tenantId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }

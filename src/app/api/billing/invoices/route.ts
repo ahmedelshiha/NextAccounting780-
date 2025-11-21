@@ -1,59 +1,150 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { withTenantContext } from '@/lib/api-wrapper'
 import { requireTenantContext } from '@/lib/tenant-utils'
+import type { TenantContext } from '@/lib/tenant-context'
+import prisma from '@/lib/prisma'
+import { logger } from '@/lib/logger'
+import { z } from 'zod'
 
-export const GET = withTenantContext(
-  async (request: NextRequest) => {
-    try {
-      const { userId } = requireTenantContext()
+const createInvoiceSchema = z.object({
+  number: z.string().optional(),
+  amount: z.number().positive(),
+  currency: z.string().default('USD'),
+})
 
-      const invoices = [
-        {
-          id: 'inv_1',
-          invoiceNumber: 'INV-2024-001',
-          date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: 299.99,
-          status: 'paid' as const,
-          currency: 'USD',
-          pdfUrl: '/api/billing/invoices/inv_1/download',
-        },
-        {
-          id: 'inv_2',
-          invoiceNumber: 'INV-2024-002',
-          date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: 299.99,
-          status: 'paid' as const,
-          currency: 'USD',
-          pdfUrl: '/api/billing/invoices/inv_2/download',
-        },
-        {
-          id: 'inv_3',
-          invoiceNumber: 'INV-2024-003',
-          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: 149.99,
-          status: 'pending' as const,
-          currency: 'USD',
-          pdfUrl: '/api/billing/invoices/inv_3/download',
-        },
-        {
-          id: 'inv_4',
-          invoiceNumber: 'INV-2024-004',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: 99.99,
-          status: 'overdue' as const,
-          currency: 'USD',
-          pdfUrl: '/api/billing/invoices/inv_4/download',
-        },
-      ]
+export const GET = withTenantContext(async (request: NextRequest) => {
+  let ctx: TenantContext | undefined;
 
-      return NextResponse.json({
-        invoices,
-        total: invoices.length,
-      })
-    } catch (error) {
-      console.error('Billing API error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  try {
+    ctx = requireTenantContext()
+
+    if (!ctx.userId || !ctx.tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-  },
-  { requireAuth: true }
-)
+
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50,
+      select: {
+        id: true,
+        number: true,
+        totalCents: true,
+        currency: true,
+        status: true,
+        paidAt: true,
+        createdAt: true,
+      },
+    })
+
+    const formattedInvoices = invoices.map((inv) => ({
+      id: inv.id,
+      invoiceNumber: inv.number || 'INV-' + inv.id.slice(0, 8),
+      date: inv.createdAt.toISOString(),
+      amount: inv.totalCents / 100,
+      currency: inv.currency || 'USD',
+      status: (inv.status === 'PAID' ? 'paid' : inv.paidAt ? 'paid' : 'pending') as 'paid' | 'pending' | 'overdue',
+      pdfUrl: null,
+    }))
+
+    return NextResponse.json({
+      success: true,
+      invoices: formattedInvoices,
+    })
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    logger.error('Error fetching invoices', {
+      error: errorMsg,
+      userId: ctx?.userId,
+      tenantId: ctx?.tenantId,
+    });
+
+    console.error('[INVOICES_API_ERROR] GET failed:', {
+      message: errorMsg,
+      stack: errorStack,
+    });
+
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        message: errorMsg,
+        ...(process.env.NODE_ENV === 'development' && { details: errorStack }),
+      },
+      { status: 500 }
+    )
+  }
+})
+
+export const POST = withTenantContext(async (request: NextRequest) => {
+  let ctx: TenantContext | undefined;
+
+  try {
+    ctx = requireTenantContext()
+
+    if (!ctx.userId || !ctx.tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const data = createInvoiceSchema.parse(body)
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        tenantId: ctx.tenantId,
+        number: data.number,
+        totalCents: Math.round(data.amount * 100),
+        currency: data.currency,
+        status: 'UNPAID',
+      },
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: invoice.id,
+          invoiceNumber: invoice.number || 'INV-' + invoice.id.slice(0, 8),
+          amount: invoice.totalCents / 100,
+          currency: invoice.currency || 'USD',
+          status: 'pending',
+        },
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      )
+    }
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    logger.error('Error creating invoice', {
+      error: errorMsg,
+      userId: ctx?.userId,
+      tenantId: ctx?.tenantId,
+    });
+
+    console.error('[INVOICES_API_ERROR] POST failed:', {
+      message: errorMsg,
+      stack: errorStack,
+    });
+
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        message: errorMsg,
+        ...(process.env.NODE_ENV === 'development' && { details: errorStack }),
+      },
+      { status: 500 }
+    )
+  }
+})

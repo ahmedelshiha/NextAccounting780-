@@ -127,8 +127,8 @@ The Accounting Platform Team
     await sendEmail({
       to: email,
       subject,
-      htmlContent,
-      plainTextContent,
+      html: htmlContent,
+      text: plainTextContent,
     });
 
     logger.info('Invitation email sent', { email, role, tenantId });
@@ -231,8 +231,8 @@ The Security Team
     await sendEmail({
       to: email,
       subject,
-      htmlContent,
-      plainTextContent,
+      html: htmlContent,
+      text: plainTextContent,
     });
 
     logger.info('2FA setup email sent', { email });
