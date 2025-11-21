@@ -13,7 +13,7 @@ export const POST = withTenantContext(
   async (request, { params }) => {
     try {
       const ctx = requireTenantContext()
-      const { tenantId } = ctx
+      const { tenantId, userId } = ctx
 
       if (ctx.role !== 'SUPER_ADMIN' && !ctx.tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can assign tasks')
