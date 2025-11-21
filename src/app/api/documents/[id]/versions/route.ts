@@ -117,7 +117,7 @@ export const POST = withTenantAuth(async (request, context) => {
     }
 
     // Authorization
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have permission to update this document')
     }
 
@@ -168,7 +168,7 @@ export const POST = withTenantAuth(async (request, context) => {
         contentType: newFile.type,
         key: versionKey,
         url: versionUrl,
-        uploaderId: user.id,
+        uploaderId: userId,
         changeDescription: changeDescription || null,
         tenantId,
       },
@@ -195,9 +195,14 @@ export const POST = withTenantAuth(async (request, context) => {
     }).catch(() => {})
 
     // Log audit
+    const auditAction = 'documents:create_version'
     await prisma.auditLog.create({
       data: {
         tenantId,
+        action: auditAction,
+        userId,
+        resource: 'Document',
+        resourceId: document.id,
         action: 'documents:create_version',
         userId: user.id,
         resourceType: 'DocumentVersion',
