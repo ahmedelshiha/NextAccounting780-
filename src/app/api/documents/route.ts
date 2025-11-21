@@ -283,7 +283,7 @@ export const POST = withTenantAuth(async (request, context) => {
         contentType: file.type,
         provider: process.env.UPLOADS_PROVIDER || 'vercel',
         tenantId,
-        uploaderId: user.id,
+        uploaderId: userId,
         avStatus: 'pending', // Will be scanned asynchronously
         metadata: {
           description: description || null,
@@ -308,7 +308,7 @@ export const POST = withTenantAuth(async (request, context) => {
           attachmentId: document.id,
           linkedToType,
           linkedToId,
-          linkedBy: user.id,
+          linkedBy: userId,
           tenantId,
         },
       }).catch(() => {}) // Non-critical
@@ -319,8 +319,8 @@ export const POST = withTenantAuth(async (request, context) => {
       data: {
         tenantId,
         action: 'documents:upload',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: {
           documentName: document.name,
