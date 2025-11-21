@@ -1,6 +1,6 @@
 'use server'
 
-import { withTenantAuth } from '@/lib/auth-middleware'
+import { withTenantAuth, type AuthenticatedRequest } from '@/lib/auth-middleware'
 import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
@@ -9,8 +9,14 @@ import { z } from 'zod'
  * GET /api/documents/[id]/versions
  * Get document version history
  */
-export const GET = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+export const GET = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+    const params = (context as any)?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -23,7 +29,7 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
     }
 
     // Authorization check
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have access to this document')
     }
 
@@ -68,8 +74,8 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
       data: {
         tenantId,
         action: 'documents:view_versions',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
       },
     }).catch(() => {})
@@ -91,8 +97,14 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
  * POST /api/documents/[id]/versions
  * Create new version of document
  */
-export const POST = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+export const POST = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+    const params = (context as any)?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -105,7 +117,7 @@ export const POST = withTenantAuth(async (request, { tenantId, user }, { params 
     }
 
     // Authorization
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have permission to update this document')
     }
 
@@ -156,7 +168,7 @@ export const POST = withTenantAuth(async (request, { tenantId, user }, { params 
         contentType: newFile.type,
         key: versionKey,
         url: versionUrl,
-        uploaderId: user.id,
+        uploaderId: userId,
         changeDescription: changeDescription || null,
         tenantId,
       },
@@ -183,9 +195,14 @@ export const POST = withTenantAuth(async (request, { tenantId, user }, { params 
     }).catch(() => {})
 
     // Log audit
+    const auditAction = 'documents:create_version'
     await prisma.auditLog.create({
       data: {
         tenantId,
+        action: auditAction,
+        userId,
+        resource: 'Document',
+        resourceId: document.id,
         action: 'documents:create_version',
         userId: user.id,
         resourceType: 'DocumentVersion',

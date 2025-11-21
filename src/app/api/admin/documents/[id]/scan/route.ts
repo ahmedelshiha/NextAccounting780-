@@ -9,7 +9,10 @@ import { z } from 'zod'
  * POST /api/admin/documents/[id]/scan
  * Trigger antivirus scan for a document
  */
-export const POST = withAdminAuth(async (request, { tenantId, user }, { params }) => {
+export const POST = withAdminAuth(async (request, context) => {
+  const tenantId = (request as any).tenantId
+  const userId = (request as any).userId
+  const params = context?.params || {}
   try {
     const document = await prisma.attachment.findFirst({
       where: {
@@ -45,7 +48,7 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
         metadata: {
           ...document.metadata,
           scanRequested: {
-            by: user.id,
+            by: userId,
             at: new Date().toISOString(),
             force,
           },
@@ -58,8 +61,8 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
       data: {
         tenantId,
         action: 'admin:documents_scan',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: {
           documentName: document.name,
@@ -94,7 +97,9 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
  * GET /api/admin/documents/[id]/scan
  * Get scan status
  */
-export const GET = withAdminAuth(async (request, { tenantId, user }, { params }) => {
+export const GET = withAdminAuth(async (request, context) => {
+  const tenantId = (request as any).tenantId
+  const params = context?.params || {}
   try {
     const document = await prisma.attachment.findFirst({
       where: {

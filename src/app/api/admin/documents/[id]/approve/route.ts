@@ -15,8 +15,18 @@ const ApprovalSchema = z.object({
  * POST /api/admin/documents/[id]/approve
  * Approve or reject a document
  */
-export const POST = withAdminAuth(async (request, { tenantId, user }, { params }) => {
+export const POST = withAdminAuth(async (request, context) => {
   try {
+    const tenantId = (request as any).tenantId
+    const userId = (request as any).userId
+    const params = context?.params || {}
+
+    // Fetch user details for response
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    })
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -65,7 +75,7 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
           ...document.metadata,
           approval: {
             approved,
-            approvedBy: user.id,
+            approvedBy: userId,
             approvedAt: new Date().toISOString(),
             approvalNotes: notes || null,
             expiresAt: expiresAt?.toISOString() || null,
@@ -88,12 +98,12 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
       data: {
         tenantId,
         action: approved ? 'admin:documents_approve' : 'admin:documents_reject',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: {
           documentName: document.name,
-          approvedBy: user.id,
+          approvedBy: userId,
           approved,
           notes,
           expiresAt,
@@ -113,9 +123,9 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
         approved,
         approvedAt: new Date(),
         approvedBy: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
+          id: user?.id || userId,
+          name: user?.name || 'System',
+          email: user?.email || '',
         },
         approvalNotes: notes,
         expiresAt: expiresAt || undefined,
@@ -135,8 +145,11 @@ export const POST = withAdminAuth(async (request, { tenantId, user }, { params }
  * GET /api/admin/documents/[id]/approve
  * Get approval status
  */
-export const GET = withAdminAuth(async (request, { tenantId, user }, { params }) => {
+export const GET = withAdminAuth(async (request, context) => {
   try {
+    const tenantId = (request as any).tenantId
+    const params = context?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,

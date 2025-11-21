@@ -4,6 +4,7 @@ import { respond } from '@/lib/api-response'
 import { TaskUpdateSchema } from '@/schemas/shared/entities/task'
 import prisma from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { requireTenantContext } from '@/lib/tenant-utils'
 import { z } from 'zod'
 
 /**
@@ -11,10 +12,13 @@ import { z } from 'zod'
  * Get task details with comments (admin only)
  */
 export const GET = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId, role, tenantRole } = ctx
+
       // Verify admin access
-      if (!user.isAdmin) {
+      if (role !== 'SUPER_ADMIN' && !tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can access this endpoint')
       }
 
@@ -76,7 +80,7 @@ export const GET = withTenantContext(
       return respond.serverError()
     }
   },
-  { requireAuth: true, requireAdmin: true }
+  { requireAuth: true }
 )
 
 /**
@@ -84,10 +88,13 @@ export const GET = withTenantContext(
  * Update a task (admin only)
  */
 export const PUT = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId, role, tenantRole } = ctx
+
       // Verify admin access
-      if (!user.isAdmin) {
+      if (role !== 'SUPER_ADMIN' && !tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can update tasks')
       }
 
@@ -156,7 +163,7 @@ export const PUT = withTenantContext(
 
       if (Object.keys(changes).length > 0) {
         await logAudit({
-          userId: user.id,
+          userId,
           action: 'TASK_UPDATED',
           entity: 'Task',
           entityId: taskId,
@@ -173,7 +180,7 @@ export const PUT = withTenantContext(
       return respond.serverError()
     }
   },
-  { requireAuth: true, requireAdmin: true }
+  { requireAuth: true }
 )
 
 /**
@@ -181,10 +188,13 @@ export const PUT = withTenantContext(
  * Delete a task (admin only)
  */
 export const DELETE = withTenantContext(
-  async (request, { user, tenantId }, { params }) => {
+  async (request, { params }) => {
     try {
+      const ctx = requireTenantContext()
+      const { tenantId, userId, role, tenantRole } = ctx
+
       // Verify admin access
-      if (!user.isAdmin) {
+      if (role !== 'SUPER_ADMIN' && !tenantRole?.includes('ADMIN')) {
         return respond.forbidden('Only administrators can delete tasks')
       }
 
@@ -204,7 +214,7 @@ export const DELETE = withTenantContext(
 
       // Log audit event before deletion
       await logAudit({
-        userId: user.id,
+        userId,
         action: 'TASK_DELETED',
         entity: 'Task',
         entityId: taskId,
@@ -225,5 +235,5 @@ export const DELETE = withTenantContext(
       return respond.serverError()
     }
   },
-  { requireAuth: true, requireAdmin: true }
+  { requireAuth: true }
 )

@@ -23,7 +23,9 @@ type AdminDocumentFilter = z.infer<typeof AdminDocumentFilterSchema>
  * GET /api/admin/documents
  * List all documents in tenant (admin only)
  */
-export const GET = withAdminAuth(async (request, { tenantId, user }) => {
+export const GET = withAdminAuth(async (request, context) => {
+  const tenantId = (request as any).tenantId
+  const userId = (request as any).userId
   try {
     const queryParams = Object.fromEntries(request.nextUrl.searchParams)
     const filters = AdminDocumentFilterSchema.parse(queryParams)
@@ -132,8 +134,8 @@ export const GET = withAdminAuth(async (request, { tenantId, user }) => {
       data: {
         tenantId,
         action: 'admin:documents_list',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         details: {
           count: documents.length,
           total,

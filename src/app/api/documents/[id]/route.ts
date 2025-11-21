@@ -1,7 +1,7 @@
 'use server'
 
 import { NextRequest } from 'next/server'
-import { withTenantAuth } from '@/lib/auth-middleware'
+import { withTenantAuth, type AuthenticatedRequest } from '@/lib/auth-middleware'
 import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
@@ -10,8 +10,14 @@ import { z } from 'zod'
  * GET /api/documents/[id]
  * Get document details
  */
-export const GET = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+export const GET = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+    const params = (context as any)?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -64,7 +70,7 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
     }
 
     // Authorization check - portal users can only see their own documents
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have access to this document')
     }
 
@@ -92,7 +98,7 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
     }
 
     // Admin gets additional details
-    if (user.role === 'ADMIN') {
+    if (userRole === 'ADMIN') {
       return respond.ok({
         data: {
           ...baseData,
@@ -112,8 +118,8 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
       data: {
         tenantId,
         action: 'documents:view',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
       },
     }).catch(() => {})
@@ -129,8 +135,14 @@ export const GET = withTenantAuth(async (request, { tenantId, user }, { params }
  * PUT /api/documents/[id]
  * Update document metadata
  */
-export const PUT = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+export const PUT = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+    const params = (context as any)?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -143,7 +155,7 @@ export const PUT = withTenantAuth(async (request, { tenantId, user }, { params }
     }
 
     // Authorization - only uploader or admin can update
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have permission to update this document')
     }
 
@@ -184,8 +196,8 @@ export const PUT = withTenantAuth(async (request, { tenantId, user }, { params }
       data: {
         tenantId,
         action: 'documents:update',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: updateData,
       },
@@ -217,8 +229,14 @@ export const PUT = withTenantAuth(async (request, { tenantId, user }, { params }
  * DELETE /api/documents/[id]
  * Delete document (soft delete for portal, hard delete for admin)
  */
-export const DELETE = withTenantAuth(async (request, { tenantId, user }, { params }) => {
+export const DELETE = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+    const params = (context as any)?.params || {}
+
     const document = await prisma.attachment.findFirst({
       where: {
         id: params.id,
@@ -231,7 +249,7 @@ export const DELETE = withTenantAuth(async (request, { tenantId, user }, { param
     }
 
     // Authorization
-    if (user.role !== 'ADMIN' && document.uploaderId !== user.id) {
+    if (userRole !== 'ADMIN' && document.uploaderId !== userId) {
       return respond.forbidden('You do not have permission to delete this document')
     }
 
@@ -240,8 +258,8 @@ export const DELETE = withTenantAuth(async (request, { tenantId, user }, { param
       data: {
         tenantId,
         action: 'documents:delete',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: {
           documentName: document.name,
@@ -251,7 +269,7 @@ export const DELETE = withTenantAuth(async (request, { tenantId, user }, { param
     }).catch(() => {})
 
     // Admin: hard delete, Portal user: soft delete (archive)
-    if (user.role === 'ADMIN') {
+    if (userRole === 'ADMIN') {
       // Hard delete - cascade handles versions, links, audit logs
       await prisma.attachment.delete({
         where: { id: params.id },

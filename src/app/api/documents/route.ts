@@ -1,7 +1,7 @@
 'use server'
 
 import { NextRequest } from 'next/server'
-import { withAdminAuth, withTenantAuth } from '@/lib/auth-middleware'
+import { withAdminAuth, withTenantAuth, type AuthenticatedRequest } from '@/lib/auth-middleware'
 import { respond } from '@/lib/api-response'
 import prisma from '@/lib/prisma'
 import { uploadFile } from '@/lib/upload-provider'
@@ -34,8 +34,13 @@ type DocumentFilter = z.infer<typeof DocumentFilterSchema>
  * GET /api/documents
  * List documents (portal: own, admin: all with filters)
  */
-export const GET = withTenantAuth(async (request, { tenantId, user }) => {
+export const GET = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+
     const queryParams = Object.fromEntries(request.nextUrl.searchParams)
     const filters = DocumentFilterSchema.parse(queryParams)
 
@@ -43,12 +48,12 @@ export const GET = withTenantAuth(async (request, { tenantId, user }) => {
     const where: any = { tenantId }
 
     // Portal users see only their own documents
-    if (user.role !== 'ADMIN') {
-      where.uploaderId = user.id
+    if (userRole !== 'ADMIN') {
+      where.uploaderId = userId
     }
 
     // Admin can filter by uploadedBy
-    if (filters.uploadedBy && user.role === 'ADMIN') {
+    if (filters.uploadedBy && userRole === 'ADMIN') {
       where.uploaderId = filters.uploadedBy
     }
 
@@ -151,7 +156,7 @@ export const GET = withTenantAuth(async (request, { tenantId, user }) => {
       }
 
       // Admin-only fields
-      if (user.role === 'ADMIN') {
+      if (userRole === 'ADMIN') {
         return {
           ...baseDoc,
           key: doc.key,
@@ -175,7 +180,7 @@ export const GET = withTenantAuth(async (request, { tenantId, user }) => {
       data: {
         tenantId,
         action: 'documents:list',
-        userId: user.id,
+        userId,
         resource: 'Document',
         metadata: {
           count: documents.length,
@@ -210,8 +215,13 @@ export const GET = withTenantAuth(async (request, { tenantId, user }) => {
  * POST /api/documents
  * Upload new document
  */
-export const POST = withTenantAuth(async (request, { tenantId, user }) => {
+export const POST = withTenantAuth(async (request, context) => {
   try {
+    const authReq = request as AuthenticatedRequest
+    const tenantId = authReq.tenantId
+    const userId = authReq.userId
+    const userRole = authReq.userRole
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const linkedToType = formData.get('linkedToType') as string | undefined
@@ -273,7 +283,7 @@ export const POST = withTenantAuth(async (request, { tenantId, user }) => {
         contentType: file.type,
         provider: process.env.UPLOADS_PROVIDER || 'vercel',
         tenantId,
-        uploaderId: user.id,
+        uploaderId: userId,
         avStatus: 'pending', // Will be scanned asynchronously
         metadata: {
           description: description || null,
@@ -298,7 +308,7 @@ export const POST = withTenantAuth(async (request, { tenantId, user }) => {
           attachmentId: document.id,
           linkedToType,
           linkedToId,
-          linkedBy: user.id,
+          linkedBy: userId,
           tenantId,
         },
       }).catch(() => {}) // Non-critical
@@ -309,8 +319,8 @@ export const POST = withTenantAuth(async (request, { tenantId, user }) => {
       data: {
         tenantId,
         action: 'documents:upload',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
         resourceId: document.id,
         details: {
           documentName: document.name,

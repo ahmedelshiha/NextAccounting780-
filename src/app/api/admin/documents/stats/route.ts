@@ -8,7 +8,9 @@ import prisma from '@/lib/prisma'
  * GET /api/admin/documents/stats
  * Get document statistics and metrics
  */
-export const GET = withAdminAuth(async (request, { tenantId, user }) => {
+export const GET = withAdminAuth(async (request, context) => {
+  const tenantId = (request as any).tenantId
+  const userId = (request as any).userId
   try {
     // Get total documents
     const total = await prisma.attachment.count({
@@ -129,8 +131,8 @@ export const GET = withAdminAuth(async (request, { tenantId, user }) => {
       data: {
         tenantId,
         action: 'admin:documents_stats',
-        userId: user.id,
-        resourceType: 'Document',
+        userId,
+        resource: 'Document',
       },
     }).catch(() => {})
 
